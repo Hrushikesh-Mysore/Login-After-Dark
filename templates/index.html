@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login After Dark - Enterprise SOC Threat Intelligence & Mobile Defense</title>
+  
+  <!-- Leaflet CSS for Global Threat Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  
+  <!-- Custom Cyber Theme Stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Ambient Cybersecurity Glow Background -->
+  <div class="cyber-bg">
+    <div class="grid-overlay"></div>
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+    <div class="glow-orb orb-3"></div>
+  </div>
+
+  <div class="app-container">
+    <!-- ======================================================== -->
+    <!-- LEFT PANEL: ENTERPRISE SOC THREAT COMMAND CENTER         -->
+    <!-- ======================================================== -->
+    <section class="panel dashboard-panel">
+      <!-- Command Center Header -->
+      <header class="dashboard-header">
+        <div class="brand">
+          <div class="pulse-indicator"></div>
+          <div>
+            <h1 class="brand-title">LOGIN AFTER DARK <span class="badge-version">SOC v2.5</span></h1>
+            <p class="brand-subtitle">AI Authentication Anomaly, Multi-Device Defense & Geo-Threat Engine</p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <button class="mobile-toggle-btn" onclick="toggleMobileSimulator()">
+            📱 <span id="toggle-sim-label">Show Mobile Simulator</span>
+            <span class="alert-counter-badge" id="header-alert-count">0</span>
+          </button>
+          <a href="/mobile" target="_blank" class="mobile-link-btn" title="Open full mobile app in separate tab/device">
+            ↗ Open Mobile App
+          </a>
+          <div class="system-badge">
+            <span class="dot live-dot"></span>
+            <span>LIVE DEFENSE</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- KPI Metrics Row -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-label">TOTAL LOGINS</span>
+          <span class="stat-value" id="stat-total">0</span>
+          <span class="stat-sub">Analyzed requests</span>
+        </div>
+        <div class="stat-card stat-suspicious">
+          <span class="stat-label">SUSPICIOUS</span>
+          <span class="stat-value" id="stat-suspicious">0</span>
+          <span class="stat-sub">Elevated risk events</span>
+        </div>
+        <div class="stat-card stat-critical">
+          <span class="stat-label">CRITICAL THREATS</span>
+          <span class="stat-value" id="stat-critical">0</span>
+          <span class="stat-sub">Immediate action</span>
+        </div>
+        <div class="stat-card stat-mobile">
+          <span class="stat-label">DEVICE ALERTS</span>
+          <span class="stat-value" id="stat-alerts">0</span>
+          <span class="stat-sub">Pending mobile reviews</span>
+        </div>
+        <div class="stat-card stat-safe">
+          <span class="stat-label">KNOWN DEVICES</span>
+          <span class="stat-value" id="stat-devices">0</span>
+          <span class="stat-sub">Tracked in SQLite</span>
+        </div>
+      </div>
+
+      <!-- Scenario Simulator Toolbar -->
+      <div class="simulator-toolbar">
+        <span class="toolbar-title">⚡ Interactive Scenarios:</span>
+        <div class="btn-group">
+          <button class="sim-btn sim-night-safe" onclick="simulateScenario('night_shift_authorized')" title="Demonstrate authorized night-shift worker (No false alarm)">
+            🌙 Night-Shift (Authorized)
+          </button>
+          <button class="sim-btn sim-night-unauth" onclick="simulateScenario('after_dark_unauthorized')" title="Day employee attempting login at 3 AM">
+            ⚠️ Unauthorized Night Login
+          </button>
+          <button class="sim-btn sim-device" onclick="simulateScenario('new_device_intrusion')" title="Intruder tries login from an unrecognized PC (Fires Mobile Push Alert)">
+            📱 New Device Intrusion
+          </button>
+          <button class="sim-btn sim-travel" onclick="simulateScenario('impossible_travel')" title="Logins from London and Tokyo within seconds">
+            ✈️ Impossible Travel
+          </button>
+          <button class="sim-btn sim-brute" onclick="simulateScenario('brute_force')" title="Repeated password guessing">
+            ⚔️ Brute-Force Spray
+          </button>
+          <button class="sim-btn sim-clear" onclick="clearAllData()">
+            🗑️ Clear Database Logs
+          </button>
+        </div>
+      </div>
+
+      <!-- Tabbed Management Views -->
+      <div class="tabs-container">
+        <div class="tab-headers">
+          <button class="tab-btn active" onclick="switchTab('logs-tab')">📋 Live Audit Stream</button>
+          <button class="tab-btn" onclick="switchTab('devices-tab')">💻 Multi-Device Inventory</button>
+          <button class="tab-btn" onclick="switchTab('shifts-tab')">⏰ Employee Shift Policies</button>
+        </div>
+
+        <!-- Tab 1: Live Audit Log Stream -->
+        <div class="tab-pane active" id="logs-tab">
+          <div class="log-table-wrapper">
+            <table class="log-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>User</th>
+                  <th>Location</th>
+                  <th>Device</th>
+                  <th>Auth</th>
+                  <th>Verdict</th>
+                  <th>Risk</th>
+                  <th>Detected Anomalies</th>
+                </tr>
+              </thead>
+              <tbody id="logs-tbody">
+                <tr class="empty-row"><td colspan="8">No logs recorded yet. Run a simulation or submit a login.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab 2: Multi-Device Inventory & Blocklist -->
+        <div class="tab-pane" id="devices-tab">
+          <div class="log-table-wrapper">
+            <table class="log-table">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Device Name</th>
+                  <th>Type</th>
+                  <th>Browser & OS</th>
+                  <th>Fingerprint</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="devices-tbody">
+                <tr class="empty-row"><td colspan="7">Loading registered devices...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab 3: Employee Shift & Time-Frame Configuration -->
+        <div class="tab-pane" id="shifts-tab">
+          <div class="shift-manager-wrapper">
+            <p class="shift-intro">
+              Eliminate false positives for night-shift employees by configuring individual working hours.
+              Workers logging in during their assigned shift window are cleared automatically.
+            </p>
+            <div class="user-shifts-grid" id="shifts-grid">
+              <!-- Dynamically populated user shift cards -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- RIGHT PANEL: AUTHENTICATION PORTAL & MOBILE SIMULATOR    -->
+    <!-- ======================================================== -->
+    <section class="panel login-panel">
+      <!-- Standard Login Card -->
+      <div class="login-card" id="login-card">
+        <div class="login-header">
+          <div class="shield-badge">🛡️</div>
+          <h2>Authentication Portal</h2>
+          <p>Multi-Device & Behavioral Anomaly Inspection</p>
+        </div>
+
+        <!-- Interactive Form -->
+        <form id="login-form" onsubmit="handleLogin(event)">
+          <div class="form-group">
+            <label for="username">Username</label>
+            <div class="input-wrapper">
+              <span class="input-icon">👤</span>
+              <input type="text" id="username" placeholder="e.g. admin or night_analyst" value="admin" required autocomplete="off">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="password">Password</label>
+            <div class="input-wrapper">
+              <span class="input-icon">🔑</span>
+              <input type="password" id="password" placeholder="Enter credentials" value="Secr3tP@ss!" required>
+            </div>
+            <div class="quick-credentials">
+              <span>Quick Fill:</span>
+              <button type="button" class="chip" onclick="fillCreds('admin', 'Secr3tP@ss!')">Admin (Day)</button>
+              <button type="button" class="chip chip-night" onclick="fillCreds('night_analyst', 'NightOwl99!')">Night-Analyst</button>
+              <button type="button" class="chip chip-fail" onclick="fillCreds('admin', 'WrongPass123')">Wrong Pass</button>
+            </div>
+          </div>
+
+          <!-- Anomaly Simulation Controls -->
+          <div class="anomaly-controls">
+            <div class="controls-title">⚙️ Behavioral Test Toggles:</div>
+
+            <div class="control-row">
+              <label for="sim-city-select">Origin Location:</label>
+              <select id="sim-city-select">
+                <option value="LIVE_GPS" selected>📍 Live Current Location (GPS Auto-Detect)</option>
+                <option value="New York">New York, USA (Corporate HQ)</option>
+                <option value="London">London, UK (Europe Office)</option>
+                <option value="Tokyo">Tokyo, Japan (APAC Branch)</option>
+                <option value="Frankfurt">Frankfurt, Germany (Tor Node)</option>
+                <option value="Moscow">Moscow, Russia (High-Risk Anomaly)</option>
+                <option value="Sydney">Sydney, Australia (Remote Hub)</option>
+              </select>
+            </div>
+
+            <div class="control-row">
+              <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.72rem; color:var(--cyan-accent); margin-top:4px;">
+                <input type="checkbox" id="require-live-gps" checked style="accent-color:var(--cyan-accent);">
+                <span>🛰️ Alert user & request live location on login</span>
+              </label>
+            </div>
+
+            <div class="control-row">
+              <label for="sim-device-select">Device Profile:</label>
+              <select id="sim-device-select">
+                <option value="known_admin" selected>Primary Admin Workstation (Trusted)</option>
+                <option value="known_night">Night-Analyst MacBook (Trusted)</option>
+                <option value="unrecognized_pc">⚠️ Unknown Attacker Laptop (New Device!)</option>
+                <option value="unrecognized_phone">⚠️ Unregistered Android Phone (New Device!)</option>
+              </select>
+            </div>
+
+            <div class="control-row">
+              <label for="sim-time-select">Login Timestamp Hour:</label>
+              <select id="sim-time-select">
+                <option value="real">Real-time (Current Hour)</option>
+                <option value="3" selected>03:22 AM (After Dark Hours)</option>
+                <option value="14">02:22 PM (Day Business Hours)</option>
+                <option value="23">11:30 PM (Late Night Hours)</option>
+              </select>
+            </div>
+          </div>
+
+          <button type="submit" class="submit-btn" id="submit-btn">
+            <span class="btn-text">SECURE SIGN IN</span>
+            <span class="btn-glow"></span>
+          </button>
+        </form>
+
+        <!-- Live Threat Assessment Result Box -->
+        <div class="assessment-container" id="assessment-container">
+          <div class="assessment-header">
+            <span class="verdict-tag" id="verdict-tag">SAFE</span>
+            <span class="verdict-score" id="verdict-score">Score: 0/100</span>
+          </div>
+          <div class="assessment-body">
+            <div class="assessment-msg" id="assessment-msg">Authentication verified.</div>
+            <div class="triggered-list" id="triggered-list"></div>
+          </div>
+        </div>
+
+        <div class="valid-users-hint">
+          <strong>Persistent SQLite Users:</strong> <code>admin</code> (Day Shift), <code>night_analyst</code> (Night Shift), <code>remote_dev</code> (24/7 Flex)
+        </div>
+      </div>
+
+      <!-- ======================================================== -->
+      <!-- DEVICE GEOLOCATION MAP (GOOGLE MAPS FREE API EMBED)      -->
+      <!-- ======================================================== -->
+      <div class="device-map-card" id="device-map-card">
+        <div class="device-map-header">
+          <div class="device-map-title">
+            <span class="geo-radar-pulse"></span>
+            <span>📍 Device Geolocation (Google Maps)</span>
+          </div>
+          <button type="button" class="btn-locate-gps" onclick="detectRealDeviceLocation()" title="Use browser GPS to pinpoint your real computer/phone location">
+            🎯 Locate My Device
+          </button>
+        </div>
+
+        <div class="device-geo-info" id="device-geo-info">
+          <div class="geo-stat-pill">
+            <span class="geo-stat-label">Target City:</span>
+            <span class="geo-stat-val" id="geo-target-name">New York, USA</span>
+          </div>
+          <div class="geo-stat-pill">
+            <span class="geo-stat-label">Coordinates:</span>
+            <span class="geo-stat-val" id="geo-coords">40.7128° N, -74.0060° W</span>
+          </div>
+          <div class="geo-stat-pill">
+            <span class="geo-stat-label">Device Posture:</span>
+            <span class="geo-stat-val val-safe" id="geo-device-status">Standard Baseline</span>
+          </div>
+          <div class="geo-stat-pill">
+            <span class="geo-stat-label">Precision:</span>
+            <span class="geo-stat-val" id="geo-accuracy">GPS Ready</span>
+          </div>
+        </div>
+
+        <div class="google-map-wrapper">
+          <iframe id="google-maps-frame"
+            src="https://maps.google.com/maps?q=40.7128,-74.0060&hl=en&z=13&output=embed"
+            width="100%"
+            height="230"
+            style="border:0; border-radius: 8px;"
+            allowfullscreen=""
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade">
+          </iframe>
+        </div>
+      </div>
+
+      <!-- ======================================================== -->
+      <!-- EMBEDDED PHONE SIMULATOR WIDGET (Toggleable)             -->
+      <!-- ======================================================== -->
+      <div class="mobile-phone-simulator" id="mobile-phone-simulator">
+        <div class="phone-frame">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="phone-header">
+              <span class="phone-time" id="phone-clock">03:22</span>
+              <span class="phone-title">SECURITY GUARDIAN</span>
+              <span class="phone-battery">🔋 98%</span>
+            </div>
+
+            <!-- Mobile Push Alerts Feed -->
+            <div class="phone-content">
+              <div class="phone-user-chip">
+                <span>Account:</span>
+                <select id="phone-user-select" onchange="fetchMobileAlerts()">
+                  <option value="admin">admin</option>
+                  <option value="night_analyst">night_analyst</option>
+                  <option value="alice">alice</option>
+                </select>
+              </div>
+
+              <!-- Push Alert Banner -->
+              <div class="phone-alert-card" id="phone-alert-card">
+                <div class="phone-alert-pulse"></div>
+                <div class="alert-top">
+                  <span class="alert-icon">⚠️</span>
+                  <span class="alert-title">NEW DEVICE ATTEMPT</span>
+                </div>
+                <div class="alert-details" id="alert-details">
+                  No active security alerts for this user. System secure.
+                </div>
+                <div class="alert-actions" id="alert-actions" style="display:none;">
+                  <button class="phone-btn btn-approve" onclick="resolveMobileAlert('APPROVE')">
+                    ✓ Authorize Device
+                  </button>
+                  <button class="phone-btn btn-block" onclick="resolveMobileAlert('BLOCK')">
+                    ✕ Block & Lock
+                  </button>
+                </div>
+              </div>
+
+              <div class="phone-footer-hint">
+                <span>💡 Real-time push alert simulator. Authorizing or blocking immediately updates the SQLite database.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <!-- Application Logic -->
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
