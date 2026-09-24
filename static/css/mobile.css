@@ -1,0 +1,356 @@
+  /* ====================================================
+    Security Guardian - Mobile Companion App Stylesheet
+    ==================================================== */
+
+  :root {
+    --bg-mobile: #090e17;
+    --bg-card: rgba(18, 25, 40, 0.9);
+    --bg-card-border: rgba(99, 102, 241, 0.25);
+    
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --text-dim: #64748b;
+    
+    --indigo-accent: #6366f1;
+    --cyan-accent: #06b6d4;
+    --safe-green: #10b981;
+    --critical-red: #ef4444;
+    --warning-amber: #f59e0b;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+    background-color: var(--bg-mobile);
+    color: var(--text-main);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+  }
+
+  .mobile-app-wrapper {
+    width: 100%;
+    max-width: 480px;
+    min-height: 100vh;
+    background: #0d121f;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    gap: 16px;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
+  }
+
+  /* Header */
+  .app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .shield-icon {
+    font-size: 1.8rem;
+    filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.5));
+  }
+
+  .header-left h2 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    color: #fff;
+  }
+
+  .sub-text {
+    font-size: 0.72rem;
+    color: #a5b4fc;
+    font-weight: 500;
+  }
+
+  .user-picker select {
+    background: #1e293b;
+    color: #cbd5e1;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    outline: none;
+  }
+
+  /* Status Card */
+  .status-card {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(6, 182, 212, 0.08) 100%);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 12px;
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .status-indicator {
+    position: relative;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .status-dot {
+    width: 10px;
+    height: 10px;
+    background-color: var(--safe-green);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--safe-green);
+  }
+
+  .status-pulse-ring {
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--safe-green);
+    opacity: 0.6;
+    animation: pulse-ring 2s infinite ease-out;
+  }
+
+  @keyframes pulse-ring {
+    0% { transform: scale(0.6); opacity: 0.9; }
+    100% { transform: scale(1.6); opacity: 0; }
+  }
+
+  .status-info h3 {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    color: #fff;
+  }
+
+  .status-info p {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  /* Section Headings */
+  .section-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 0.6px;
+    margin-bottom: 8px;
+  }
+
+  .badge-alert-count {
+    background: var(--critical-red);
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 10px;
+  }
+
+  .refresh-btn {
+    background: transparent;
+    border: none;
+    color: var(--cyan-accent);
+    font-size: 0.72rem;
+    cursor: pointer;
+  }
+
+  /* Alerts List */
+  .alerts-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .empty-alerts-card {
+    background: rgba(18, 25, 40, 0.7);
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 24px 16px;
+    text-align: center;
+  }
+
+  .check-icon {
+    font-size: 1.6rem;
+    color: var(--safe-green);
+    margin-bottom: 6px;
+  }
+
+  .empty-alerts-card h4 {
+    font-size: 0.85rem;
+    color: #fff;
+  }
+
+  .empty-alerts-card p {
+    font-size: 0.74rem;
+    color: var(--text-dim);
+    margin-top: 4px;
+    line-height: 1.35;
+  }
+
+  /* Active Alert Card */
+  .active-alert-card {
+    background: rgba(30, 41, 59, 0.95);
+    border: 1px solid var(--critical-red);
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+    border-radius: 12px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    animation: alert-pop 0.3s ease;
+  }
+
+  @keyframes alert-pop {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  .alert-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .alert-badge-danger {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.68rem;
+    font-weight: 700;
+  }
+
+  .alert-card-title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .alert-card-body {
+    font-size: 0.76rem;
+    color: #e2e8f0;
+    line-height: 1.4;
+    background: rgba(0, 0, 0, 0.25);
+    padding: 8px 10px;
+    border-radius: 6px;
+  }
+
+  .alert-card-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .mobile-action-btn {
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-mobile-approve {
+    background: #10b981;
+    color: #fff;
+  }
+
+  .btn-mobile-block {
+    background: #ef4444;
+    color: #fff;
+  }
+
+  /* Devices Section */
+  .devices-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 250px;
+    overflow-y: auto;
+  }
+
+  .device-item-card {
+    background: rgba(18, 25, 40, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .device-item-info h5 {
+    font-size: 0.8rem;
+    color: #fff;
+  }
+
+  .device-item-info span {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+  }
+
+  .device-item-actions {
+    display: flex;
+    gap: 6px;
+  }
+
+  .btn-dev-action {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+  }
+
+  .btn-dev-block {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+  }
+
+  .btn-dev-trust {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.4);
+  }
+
+  /* Footer */
+  .app-footer {
+    margin-top: auto;
+    padding-top: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .back-link {
+    color: var(--indigo-accent);
+    text-decoration: none;
+  }

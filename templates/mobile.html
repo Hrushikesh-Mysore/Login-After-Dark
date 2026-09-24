@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Security Guardian - Mobile Companion App</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="mobile-app-wrapper">
+    <!-- Mobile App Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="shield-icon">🛡️</div>
+        <div>
+          <h2>SECURITY GUARDIAN</h2>
+          <span class="sub-text">Mobile Device Defense</span>
+        </div>
+      </div>
+      <div class="user-picker">
+        <select id="mobile-user-select" onchange="loadMobileData()">
+          <option value="admin">admin</option>
+          <option value="night_analyst">night_analyst</option>
+          <option value="alice">alice</option>
+          <option value="remote_dev">remote_dev</option>
+        </select>
+      </div>
+    </header>
+
+    <!-- Main Live Guardian Status -->
+    <section class="status-card">
+      <div class="status-indicator">
+        <div class="status-pulse-ring"></div>
+        <div class="status-dot"></div>
+      </div>
+      <div class="status-info">
+        <h3>ACTIVE REAL-TIME PROTECTION</h3>
+        <p>Continuous monitoring for unauthorized logins & new devices</p>
+      </div>
+    </section>
+
+    <!-- Mobile Device Live Location & Google Maps -->
+    <section class="status-card" style="flex-direction:column; align-items:stretch; gap:10px;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:0.75rem; font-weight:700; color:#fff;">📍 Live Phone GPS Geolocation</span>
+        <button onclick="detectMobileGPS()" style="background:rgba(6,182,212,0.2); border:1px solid #06b6d4; color:#06b6d4; border-radius:6px; padding:4px 8px; font-size:0.68rem; font-weight:600; cursor:pointer;">
+          🎯 Detect GPS
+        </button>
+      </div>
+      <div style="font-size:0.7rem; color:var(--text-muted); display:flex; justify-content:space-between;" id="mobile-gps-status">
+        <span>Status: <b style="color:#10b981;">Ready to locate</b></span>
+        <span id="mobile-gps-coords">Tap detect for live fix</span>
+      </div>
+      <div style="border-radius:8px; overflow:hidden; border:1px solid rgba(255,255,255,0.1); height:140px;">
+        <iframe id="mobile-google-map"
+          src="https://maps.google.com/maps?q=40.7128,-74.0060&hl=en&z=13&output=embed"
+          width="100%"
+          height="140"
+          style="border:0;"
+          allowfullscreen=""
+          loading="lazy">
+        </iframe>
+      </div>
+    </section>
+
+    <!-- Active Device Intrusion Push Alerts -->
+    <section class="alerts-section">
+      <div class="section-heading">
+        <span>PENDING SECURITY ALERTS</span>
+        <span class="badge-alert-count" id="pending-count">0</span>
+      </div>
+
+      <div id="alerts-container" class="alerts-container">
+        <!-- Empty state or active alerts injected here -->
+        <div class="empty-alerts-card">
+          <div class="check-icon">✓</div>
+          <h4>All Devices Secured</h4>
+          <p>No unauthorized or unrecognized devices have attempted to access your account.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Registered Devices Management -->
+    <section class="devices-section">
+      <div class="section-heading">
+        <span>MY REGISTERED DEVICES</span>
+        <button class="refresh-btn" onclick="loadMobileData()">🔄 Refresh</button>
+      </div>
+
+      <div class="devices-list" id="devices-list">
+        <!-- Device items populated here -->
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <span>Protected by Login After Dark Engine</span>
+      <a href="/" class="back-link">Return to SOC Command Center</a>
+    </footer>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/mobile.js') }}"></script>
+</body>
+</html>
