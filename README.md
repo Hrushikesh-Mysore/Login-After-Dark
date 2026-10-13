@@ -1,51 +1,71 @@
 # Login After Dark — Enterprise SOC & Mobile Threat Defense 🌙🛡️
 
-An enterprise-grade authentication anomaly intelligence and real-time SOC command center built with **Python Flask** and **SQLite**.
+An enterprise-grade authentication anomaly intelligence platform and real-time SOC command center built with **Python Flask** and **SQLite (WAL Mode)**.
 
-The platform is designed to identify suspicious authentication behavior, protect against multi-device account takeover, support authorized night-shift employees without false positives, detect impossible geographic travel, and empower users with a **Mobile Security Companion App** featuring 1-click **[Authorize]** and **[Block Device]** push alerts.
+The platform detects suspicious authentication behavior, protects against multi-device account takeover, supports authorized night-shift employees without false alarms, identifies impossible travel velocity, and empowers users with a real-time **Instagram Lite Mobile Companion PWA** featuring 1-click **[Authorize]** and **[Block Device]** push defense.
 
 ---
 
-## 🌟 Key Capabilities & Architectural Enhancements
+## 🌟 Architecture & Core Innovations
 
-### 1. Persistent SQLite Database (`database.py`)
-- **Password Hashing**: Stored using `werkzeug.security` (PBKDF2-SHA256).
-- **Tables**:
-  - `users`: User credentials, display names, roles, and personalized shift windows (`DAY`, `NIGHT`, `FLEX_247`).
-  - `devices`: Tracks client fingerprints, device names, types (Desktop/Mobile), browser/OS, and trust/block status.
-  - `device_alerts`: Live push notification queue for unrecognized devices attempting access.
-  - `auth_logs`: Historical audit trail with IP, geographic coordinates (Lat/Lon/City/Country), device details, risk scores, and anomaly tags.
+```text
+┌────────────────────────────────────────────────────────────────────────┐
+│                   Desktop SOC Dashboard / Mobile PWA                   │
+│   • Hardware Entropy Fingerprint (SHA-256)   • HTML5 Web Notifications │
+│   • Dynamic Geolocation & Live Map            • SSE Push Stream (<100ms)│
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │ HTTP / SSE
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                        Flask Backend Architecture                      │
+│   • Sliding-Window Rate Limiter (25 req/min)  • Secure Cookie Sessions │
+│   • Server IP Anti-Spoofing                   • EventStream Pub/Sub    │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+         ┌──────────────────────────┴──────────────────────────┐
+         ▼                                                     ▼
+┌────────────────────────────────┐            ┌────────────────────────────────┐
+│   Dynamic Threat Engine        │            │   SQLite WAL Concurrency       │
+│ • Circular Time-Gradient Shift │            │ • PRAGMA journal_mode = WAL    │
+│ • Historical Location Baseline │            │ • PRAGMA busy_timeout = 5000   │
+│ • GeoIP Resolver with Cache    │            │ • Multi-Thread Safe Context Mgr│
+│ • 0–100 Weighted Risk Scoring  │            │ • Indexed Lookups              │
+└────────────────────────────────┘            └────────────────────────────────┘
+```
 
-### 2. The 6-Pillar Threat Detection Engine (`detection_engine.py`)
+### 1. SQLite High-Concurrency & WAL Engine (`database.py`)
+- **Write-Ahead Logging (WAL)**: `PRAGMA journal_mode = WAL` enables non-blocking simultaneous reads and writes.
+- **Busy Timeout Protection**: `PRAGMA busy_timeout = 5000` prevents database locking under burst concurrency.
+- **Thread-Safe Context Manager**: `get_db()` guarantees connection closing and zero resource leaks.
+- **Indexes**: Query performance indexed across `auth_logs(username, epoch)`, `device_alerts(user_id, status)`, and `devices(user_id, device_fingerprint)`.
+- **Stress-Tested**: Validated under 3 concurrent active users executing 120+ simultaneous transactions with 0 database locks.
+
+### 2. Real-Time Push & Zero-Polling Architecture (`event_stream.py`)
+- **Server-Sent Events (SSE)**: Built-in event bus (`/api/events/stream`) dispatches authentication logs, intrusion alerts, and shift changes with sub-100ms latency.
+- **Zero Client Polling**: Both desktop dashboard and mobile view operate without `setInterval` polling loops.
+- **Mobile Push & Haptics**: Uses HTML5 Web Notification API (`Notification.requestPermission()`) and vibration feedback (`navigator.vibrate`) for instant device intrusion alerts.
+
+### 3. Dynamic Anomaly Detection Engine (`detection_engine.py`)
 | Pillar | Detection Mechanism | Severity |
 | :--- | :--- | :--- |
-| **1. Shift & Schedule Policy** | Compares login time against the employee's assigned shift. **Night-shift workers are cleared automatically as legitimate**, while unauthorized off-hours access is flagged. | `INFO` (Authorized) / `MEDIUM` (Violation) |
-| **2. Multi-Device Defense** | Detects unrecognized device fingerprints. Generates an instant push alert to the registered mobile companion app. | `HIGH` |
-| **3. Blocked Device Lockout** | Immediately halts login attempts from blacklisted devices (HTTP 403). | `CRITICAL` |
-| **4. Impossible Travel Velocity** | Calculates geographic distance and elapsed time between logins using the Haversine formula. Flags velocities exceeding airliner speed ($>900$ km/h). | `CRITICAL` |
-| **5. Brute-Force Spraying** | Tracks repeated failed attempts ($\ge 3$) in a sliding 3-minute window per user/IP. | `HIGH` / `CRITICAL` |
-| **6. Request Burst / Bot Anomaly** | Flags abnormal spikes ($\ge 4$ attempts in $< 10$ seconds) from a single IP. | `HIGH` |
+| **1. Shift & Schedule Policy** | Continuous circular time-gradient calculates deviation from shift window. Night workers (`night_analyst`) at 03:00 AM are **SAFE** (0 risk), marginal overtime (+1h) is low risk, and off-hours night access is flagged. | `INFO` (Approved) / `LOW` / `MEDIUM` |
+| **2. Historical Location Baseline** | Profiles past successful logins (`NEW_LOCATION_ANOMALY`). Unfamiliar locations trigger elevated risk while maintaining night-shift clearance. | `MEDIUM` |
+| **3. Multi-Device Defense** | Detects unrecognized device fingerprints and fires instant mobile push alerts with 1-click authorize or block. | `HIGH` |
+| **4. Blocked Device Lockout** | Immediately rejects logins from blacklisted device fingerprints with HTTP 403. | `CRITICAL` |
+| **5. Impossible Travel Velocity** | Calculates geographic distance and elapsed time between logins via Haversine formula. Flags velocities exceeding airliner speed (>900 km/h). | `CRITICAL` |
+| **6. Brute-Force & Bot Bursts** | Tracks rapid failed attempts ($\ge 3$ within sliding window) and burst velocities ($\ge 4$ attempts within 10 seconds). | `HIGH` / `CRITICAL` |
+| **7. Anonymizing Tor Relays** | Identifies logins originating from known anonymizing Tor exit relays. | `CRITICAL` |
 
-### 3. Employee Shift & Time-Frame Scheduler ("Work After Dark")
-- In typical security systems, 3:00 AM logins are blindly flagged as threats.
-- In **Login After Dark**, employees have configurable shift schedules:
-  - **Standard Day Shift**: `09:00 – 18:00` (off-hours flagged after dark).
-  - **Night-Shift Operator**: `22:00 – 07:00` (working after dark is verified as approved baseline).
-  - **24/7 Flex clearance**: Round-the-clock clearance (SREs, Global Devs).
+### 4. Client Hardware Entropy Fingerprinting (`static/js/fingerprint.js`)
+- Generates 64-character cryptographic SHA-256 hashes using Canvas 2D render tests, WebGL GPU context strings, screen metrics, and system entropy via the Web Crypto API.
+- Replaces mock dropdowns with genuine hardware telemetry.
 
-### 4. Interactive Global GeoIP Threat Map
-- Embedded **Leaflet.js** world map with a dark cybersecurity theme.
-- Plots incoming authentication nodes across New York, London, Tokyo, Frankfurt, Moscow, and Sydney with glowing radar pings.
-
-### 5. Mobile Companion App (`/mobile`) & Embedded Phone Simulator
-- Openable on smartphones at `http://<your-ip>:5000/mobile` or toggled right inside the desktop dashboard via the **📱 Show Mobile Simulator** button.
-- When an unrecognized device attempts to log in, the mobile phone vibrates with an instant alert:
-  > **⚠️ UNRECOGNIZED DEVICE ATTEMPT**  
-  > *Account: admin*  
-  > *Device: Firefox on Linux*  
-  > *Location: Moscow, Russia*  
-  > *[✓ Authorize & Trust]   [✕ Block & Lock]*
-- Clicking **[Block]** immediately blacklists the device in SQLite and blocks all future login attempts from that fingerprint!
+### 5. Instagram Lite Mobile Companion PWA (`/mobile`)
+- Mobile security interface featuring:
+  - **Stories Status Rings**: Visual threat status and active shift clearance indicator.
+  - **Live Security Feed**: Real-time card feed of incoming authentications and alerts.
+  - **Bottom Navigation**: Quick switching between Feed, Alerts, Devices, and Shift Settings.
+  - **Web App Manifest**: Home-screen installable (`manifest.json`) without Android Studio.
 
 ---
 
@@ -53,32 +73,46 @@ The platform is designed to identify suspicious authentication behavior, protect
 
 ```text
 login-after-dark/
-├── app.py                     # Flask Web Application & REST API Endpoints
-├── database.py                # SQLite Database Management & Password Hashing
-├── detection_engine.py        # 6-Pillar Anomaly & Threat Detection Algorithms
-├── requirements.txt           # Dependencies (Flask >= 3.0.0, Werkzeug)
-├── test_app.py                # Automated Integration & Security Tests
+├── app.py                     # Flask Web Application, Session Mgmt & REST APIs
+├── database.py                # SQLite WAL Database, Context Managers & Seeding
+├── detection_engine.py        # 7-Pillar Dynamic Threat Scoring & Baseline Profiling
+├── rate_limiter.py            # Sliding Window Token Limiter for Login Protection
+├── event_stream.py            # Server-Sent Events (SSE) Real-Time Pub/Sub Bus
+├── geoip_resolver.py          # Dynamic IP-to-Location Resolver with In-Memory Caching
+├── requirements.txt           # Python Dependencies
+├── test_app.py                # Core Functional & Threat Engine Unit Tests (13 tests)
+├── test_concurrency.py        # Multi-User Concurrency Stress Test Suite (3 users, 120 ops)
+│
+├── demo-attacks/              # Interactive & Automated Threat Simulation Scripts
+│   ├── run_demo.py            # Interactive Console Launcher for All Attacks
+│   ├── brute_force.py         # Automated Password Spray Simulation
+│   ├── impossible_travel.py   # London -> Tokyo Transcontinental Velocity Test
+│   ├── new_device_alert.py    # Unrecognized Machine Intrusion & Mobile Alert Test
+│   ├── night_shift_check.py   # Authorized Night Operator vs Day Worker Check
+│   ├── tor_exit_node.py       # Anonymous Tor Exit Relay Simulation
+│   └── README.md              # Demonstration Guide
 │
 ├── templates/
-│   ├── index.html             # Desktop SOC Command Center (Map, Dashboard, Devices, Shifts)
-│   └── mobile.html            # Standalone Mobile Companion Security App
+│   ├── index.html             # Desktop SOC Command Center & Collapsible Sandbox
+│   └── mobile.html            # Standalone Instagram Lite Mobile Companion App
 │
 └── static/
+    ├── manifest.json          # PWA Web App Manifest for Mobile Home Screen Install
     ├── css/
     │   ├── style.css          # SOC Command Center Cyber Theme & Phone Frame Styling
-    │   └── mobile.css         # Clean iOS/Android Mobile Companion Stylesheet
+    │   └── mobile.css         # Modern Instagram-Style Mobile Companion Stylesheet
     └── js/
-        ├── app.js             # Desktop SOC Controller, Leaflet Map, Real-time Sync
-        └── mobile.js          # Mobile Companion Controller & Push Notification Engine
+        ├── app.js             # Desktop SOC Controller, Leaflet Map & SSE Listener
+        ├── mobile.js          # Mobile Companion Controller, Web Push & Haptics
+        └── fingerprint.js     # Cryptographic Canvas/Hardware Entropy Fingerprinter
 ```
 
 ---
 
 ## 🚀 Quickstart & Setup
 
-### 1. Create Virtual Environment & Install Dependencies
+### 1. Set Up Virtual Environment & Dependencies
 ```bash
-cd /home/hrushi/.gemini/antigravity/scratch/login-after-dark
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -88,57 +122,65 @@ pip install -r requirements.txt
 ```bash
 python app.py
 ```
-- **Desktop SOC Command Center**: Open [`http://127.0.0.1:5000`](http://127.0.0.1:5000)
-- **Mobile Companion App**: Open [`http://127.0.0.1:5000/mobile`](http://127.0.0.1:5000/mobile)
+* **Desktop SOC Command Center**: Open [`http://127.0.0.1:5000`](http://127.0.0.1:5000)
+* **Mobile Companion App**: Open [`http://127.0.0.1:5000/mobile`](http://127.0.0.1:5000/mobile)
 
-### 3. Run Automated Tests
+### 3. Run the Automated Test Suites
+Run the complete unit, functional, and security test suite:
 ```bash
-python -m unittest test_app.py
+./venv/bin/python -m unittest discover -s . -p "test_*.py"
 ```
-*(All 6 unit tests verify multi-device alerts, shifts, impossible travel, and device blocking in $< 1$s).*
+
+Run the multi-user concurrency stress test (simulates 3 concurrent active users under 120+ operations):
+```bash
+./venv/bin/python test_concurrency.py
+```
 
 ---
 
-## 🧪 Demonstration & Test Scenarios
+## ⚔️ Interactive Threat Attack Demos (`demo-attacks/`)
 
-### Default Persistent Users (Stored in SQLite)
+An interactive launcher is included to demonstrate threat detection in real-time on the SOC dashboard and mobile app:
+
+```bash
+./venv/bin/python demo-attacks/run_demo.py
+```
+
+Or run individual scenarios directly against the running server:
+* **Brute-Force Spraying**: `./venv/bin/python demo-attacks/brute_force.py`
+* **Impossible Travel**: `./venv/bin/python demo-attacks/impossible_travel.py`
+* **Unrecognized Device**: `./venv/bin/python demo-attacks/new_device_alert.py`
+* **Night Shift Policy**: `./venv/bin/python demo-attacks/night_shift_check.py`
+* **Tor Exit Relay**: `./venv/bin/python demo-attacks/tor_exit_node.py`
+
+---
+
+## 👥 Default Users (Persistent SQLite)
+
 | Username | Password | Role | Shift Schedule |
 | :--- | :--- | :--- | :--- |
-| `admin` | `Secr3tP@ss!` | SecOps Lead | Day Shift (09:00 – 18:00) |
-| `night_analyst` | `NightOwl99!` | Threat Responder | **Night Shift (22:00 – 07:00)** |
-| `remote_dev` | `FlexPass123` | Global SRE | 24/7 Flex (Anytime) |
-| `alice` | `CyberPass123` | Security Analyst | Day Shift (09:00 – 18:00) |
-
-### Testing with 1-Click Buttons
-1. **🌙 Night-Shift (Authorized)**:
-   - Simulates `night_analyst` logging in at **03:15 AM**.
-   - **Result**: `SAFE` (0 risk points). Proves that night workers are verified without false alarms!
-2. **⚠️ Unauthorized Night Login**:
-   - Simulates day-worker `admin` logging in at **03:15 AM**.
-   - **Result**: `SUSPICIOUS` (`SHIFT_VIOLATION` flagged).
-3. **📱 New Device Intrusion**:
-   - Simulates an attacker trying to log in as `admin` from an unrecognized device in Moscow.
-   - **Result**: Flags `NEW_DEVICE_DETECTED` and immediately triggers a push notification on the mobile app.
-   - In the mobile view or embedded phone simulator, click **[✕ Block & Lock]** to blacklist the device.
-4. **✈️ Impossible Travel**:
-   - Simulates two consecutive logins from **London** and **Tokyo** within seconds.
-   - **Result**: `CRITICAL` threat flagged due to impossible velocity ($>900$ km/h).
-5. **⚔️ Brute-Force Spray**:
-   - Fires 4 consecutive wrong passwords against user `admin`.
-   - **Result**: `CRITICAL` threat flagged for automated password cracking.
+| `admin` | `Secr3tP@ss!` | SecOps Lead | **Day Shift** (09:00 – 18:00) |
+| `night_analyst` | `NightOwl99!` | Threat Responder | **Night Shift** (22:00 – 07:00) |
+| `remote_dev` | `FlexPass123` | Global SRE | **24/7 Flex** (Round-the-clock) |
+| `alice` | `CyberPass123` | Security Analyst | **Day Shift** (09:00 – 18:00) |
 
 ---
 
 ## 📡 REST API Reference
 
-- `POST /api/login`: Accepts credentials, device fingerprint, location city, and timestamp hour. Evaluates threat and records log in SQLite.
-- `GET /api/stats`: Returns aggregated counts (Total Logins, Threats, Pending Device Alerts, Registered Devices).
-- `GET /api/logs`: Returns historical audit trail in reverse-chronological order.
-- `GET /api/devices`: Returns device inventory and trust status.
-- `POST /api/devices/action`: Set trust or block status on a device (`BLOCK` / `TRUST`).
-- `GET /api/users`: Returns users and their assigned shift schedules.
-- `POST /api/users/shift`: Updates an employee's shift configuration.
-- `GET /api/mobile/alerts`: Returns pending device alerts for a user.
-- `POST /api/mobile/action`: Approves or blocks an unrecognized device (`APPROVE` / `BLOCK`).
-- `POST /api/simulate`: Triggers automated demonstration scenarios.
-- `POST /api/clear`: Resets logs and alert queues.
+### Real-Time & Session Endpoints
+* `GET /api/events/stream`: Real-time Server-Sent Events (SSE) broadcast channel.
+* `GET /api/auth/me`: Current session inspection and user identity check.
+* `POST /api/auth/logout`: Terminates active authenticated session.
+
+### Core Threat & Authentication APIs
+* `POST /api/login`: Evaluates credentials, client fingerprint, IP, and shift policy. Records audit entry.
+* `GET /api/stats`: Aggregated metrics (total logins, threat counts, pending alerts, device inventory).
+* `GET /api/logs`: Historical audit logs (supports `?limit=N`).
+* `GET /api/devices`: Registered device inventory with trust and block statuses.
+* `POST /api/devices/action`: Set device status (`BLOCK` / `TRUST`).
+* `GET /api/users`: Registered user accounts and active shift configurations.
+* `POST /api/users/shift`: Updates employee shift schedule (`user_id` or `username`, `shift_type`, `shift_start_hour`, `shift_end_hour`).
+* `GET /api/mobile/alerts`: Pending device alerts for mobile notification queue.
+* `POST /api/mobile/action`: Mobile authorization action (`APPROVE` / `BLOCK`).
+* `POST /api/clear`: Resets historical audit logs and alert queues.

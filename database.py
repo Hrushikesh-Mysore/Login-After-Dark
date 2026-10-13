@@ -3,15 +3,23 @@ import os
 import json
 import time
 from datetime import datetime
+from contextlib import contextmanager
 from werkzeug.security import generate_password_hash, check_password_hash
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "auth_security.db")
 
+@contextmanager
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
+    """Thread-safe context manager for SQLite with WAL mode, busy timeout, and automatic connection closing."""
+    conn = sqlite3.connect(DB_PATH, timeout=10.0)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode = WAL")
+    conn.execute("PRAGMA busy_timeout = 5000")
     conn.execute("PRAGMA foreign_keys = ON")
-    return conn
+    try:
+        yield conn
+    finally:
+        conn.close()
 
 def init_db():
     with get_db() as conn:
@@ -92,6 +100,13 @@ def init_db():
             details TEXT
         );
         """)
+
+        # 5. Performance Indexes for High-Concurrency Lookups
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_auth_logs_user_epoch ON auth_logs(username, epoch);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_auth_logs_epoch ON auth_logs(epoch DESC);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_device_alerts_user_status ON device_alerts(user_id, status);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_devices_user_fp ON devices(user_id, device_fingerprint);")
+
         conn.commit()
 
 def seed_default_data():
@@ -192,6 +207,21 @@ def seed_default_data():
             ))
 
             conn.commit()
+        else:
+            # Idempotently restore default shift windows and device trust for test repeatability
+            cursor.execute("""
+                UPDATE users SET shift_type = 'DAY', shift_start_hour = 9, shift_end_hour = 18 WHERE username IN ('admin', 'alice');
+            """)
+            cursor.execute("""
+                UPDATE users SET shift_type = 'NIGHT', shift_start_hour = 22, shift_end_hour = 7 WHERE username = 'night_analyst';
+            """)
+            cursor.execute("""
+                UPDATE users SET shift_type = 'FLEX_247', shift_start_hour = 0, shift_end_hour = 24 WHERE username = 'remote_dev';
+            """)
+            cursor.execute("""
+                UPDATE devices SET is_trusted = 1, is_blocked = 0 WHERE device_fingerprint IN ('fp-admin-workstation-lin-01', 'fp-night-laptop-mac-01');
+            """)
+            conn.commit()
 
 # --- Database Query Helpers ---
 
@@ -199,13 +229,15 @@ def get_user_by_username(username):
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
-        return cursor.fetchone()
+        row = cursor.fetchone()
+        return dict(row) if row else None
 
 def get_user_by_id(user_id):
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
-        return cursor.fetchone()
+        row = cursor.fetchone()
+        return dict(row) if row else None
 
 def verify_user_password(username, password):
     user = get_user_by_username(username)

@@ -2,106 +2,223 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Security Guardian - Mobile Companion App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Security Guardian Lite — Mobile SOC Companion</title>
+  
+  <!-- PWA & Mobile Web App Meta Tags (No Android Studio Needed!) -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Guardian Lite">
+  <meta name="theme-color" content="#070b14">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+
+  <!-- Stylesheets & Fonts -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
-<body>
-  <div class="mobile-app-wrapper">
-    <!-- Mobile App Header -->
-    <header class="app-header">
-      <div class="header-left">
-        <div class="shield-icon">🛡️</div>
-        <div>
-          <h2>SECURITY GUARDIAN</h2>
-          <span class="sub-text">Mobile Device Defense</span>
-        </div>
+<body class="insta-lite-body">
+  <div class="insta-container">
+
+    <!-- ========================================== -->
+    <!-- 1. INSTAGRAM LITE HEADER                   -->
+    <!-- ========================================== -->
+    <header class="insta-header">
+      <div class="insta-brand">
+        <span class="insta-shield">🛡️</span>
+        <span class="insta-logo-text">SECURITY GUARDIAN</span>
+        <span class="insta-badge-lite">LITE</span>
       </div>
-      <div class="user-picker">
-        <select id="mobile-user-select" onchange="loadMobileData()">
+      <div class="insta-header-actions">
+        <select id="mobile-user-select" class="insta-user-select" onchange="loadMobileData()">
           <option value="admin">admin</option>
           <option value="night_analyst">night_analyst</option>
           <option value="alice">alice</option>
           <option value="remote_dev">remote_dev</option>
         </select>
+        <span class="insta-live-dot" title="Live Connection"></span>
       </div>
     </header>
 
-    <!-- Main Live Guardian Status -->
-    <section class="status-card">
-      <div class="status-indicator">
-        <div class="status-pulse-ring"></div>
-        <div class="status-dot"></div>
-      </div>
-      <div class="status-info">
-        <h3>ACTIVE REAL-TIME PROTECTION</h3>
-        <p>Continuous monitoring for unauthorized logins & new devices</p>
-      </div>
-    </section>
-
-    <!-- Mobile Device Live Location & Google Maps -->
-    <section class="status-card" style="flex-direction:column; align-items:stretch; gap:10px;">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <span style="font-size:0.75rem; font-weight:700; color:#fff;">📍 Live Phone GPS Geolocation</span>
-        <button onclick="detectMobileGPS()" style="background:rgba(6,182,212,0.2); border:1px solid #06b6d4; color:#06b6d4; border-radius:6px; padding:4px 8px; font-size:0.68rem; font-weight:600; cursor:pointer;">
-          🎯 Detect GPS
-        </button>
-      </div>
-      <div style="font-size:0.7rem; color:var(--text-muted); display:flex; justify-content:space-between;" id="mobile-gps-status">
-        <span>Status: <b style="color:#10b981;">Ready to locate</b></span>
-        <span id="mobile-gps-coords">Tap detect for live fix</span>
-      </div>
-      <div style="border-radius:8px; overflow:hidden; border:1px solid rgba(255,255,255,0.1); height:140px;">
-        <iframe id="mobile-google-map"
-          src="https://maps.google.com/maps?q=40.7128,-74.0060&hl=en&z=13&output=embed"
-          width="100%"
-          height="140"
-          style="border:0;"
-          allowfullscreen=""
-          loading="lazy">
-        </iframe>
-      </div>
-    </section>
-
-    <!-- Active Device Intrusion Push Alerts -->
-    <section class="alerts-section">
-      <div class="section-heading">
-        <span>PENDING SECURITY ALERTS</span>
-        <span class="badge-alert-count" id="pending-count">0</span>
-      </div>
-
-      <div id="alerts-container" class="alerts-container">
-        <!-- Empty state or active alerts injected here -->
-        <div class="empty-alerts-card">
-          <div class="check-icon">✓</div>
-          <h4>All Devices Secured</h4>
-          <p>No unauthorized or unrecognized devices have attempted to access your account.</p>
+    <!-- ========================================== -->
+    <!-- 2. INSTAGRAM STORIES STATUS BAR            -->
+    <!-- ========================================== -->
+    <div class="insta-stories-bar">
+      <!-- Story 1: Defense Active -->
+      <div class="story-item active-ring" onclick="switchMobileTab('tab-alerts')">
+        <div class="story-avatar-wrapper">
+          <div class="story-avatar">🛡️</div>
         </div>
-      </div>
-    </section>
-
-    <!-- Registered Devices Management -->
-    <section class="devices-section">
-      <div class="section-heading">
-        <span>MY REGISTERED DEVICES</span>
-        <button class="refresh-btn" onclick="loadMobileData()">🔄 Refresh</button>
+        <span class="story-label">Protection</span>
       </div>
 
-      <div class="devices-list" id="devices-list">
-        <!-- Device items populated here -->
+      <!-- Story 2: Shift Mode -->
+      <div class="story-item active-ring" onclick="switchMobileTab('tab-profile')">
+        <div class="story-avatar-wrapper">
+          <div class="story-avatar" id="story-shift-icon">🌙</div>
+        </div>
+        <span class="story-label" id="story-shift-label">Shift</span>
       </div>
-    </section>
 
-    <!-- Footer -->
-    <footer class="app-footer">
-      <span>Protected by Login After Dark Engine</span>
-      <a href="/" class="back-link">Return to SOC Command Center</a>
-    </footer>
+      <!-- Story 3: Alerts Counter -->
+      <div class="story-item" id="story-alert-ring" onclick="switchMobileTab('tab-alerts')">
+        <div class="story-avatar-wrapper">
+          <div class="story-avatar">🔔</div>
+          <span class="story-badge" id="story-alert-badge">0</span>
+        </div>
+        <span class="story-label">Alerts</span>
+      </div>
+
+      <!-- Story 4: GPS Location -->
+      <div class="story-item active-ring" onclick="detectMobileGPS()">
+        <div class="story-avatar-wrapper">
+          <div class="story-avatar">📍</div>
+        </div>
+        <span class="story-label">GPS Fix</span>
+      </div>
+
+      <!-- Story 5: Hardware -->
+      <div class="story-item" onclick="switchMobileTab('tab-devices')">
+        <div class="story-avatar-wrapper">
+          <div class="story-avatar">💻</div>
+        </div>
+        <span class="story-label">Devices</span>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 3. MAIN TAB CONTENT (4 TABS)               -->
+    <!-- ========================================== -->
+    <main class="insta-main-content">
+
+      <!-- TAB 1: SECURITY FEED (Instagram Post Style) -->
+      <section class="insta-tab-pane active" id="tab-feed">
+        <div class="feed-header-banner">
+          <span>LIVE AUDIT STREAM</span>
+          <button class="insta-icon-btn" onclick="loadMobileData()">🔄</button>
+        </div>
+        <div id="feed-posts-container" class="feed-posts-list">
+          <div class="empty-feed-card">
+            <div class="empty-icon">📡</div>
+            <p>Loading real-time security events...</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: PUSH ALERTS (Interactive Authorize/Block) -->
+      <section class="insta-tab-pane" id="tab-alerts">
+        <div class="section-title-bar">
+          <h3>INTRUSION ALERTS</h3>
+          <span class="badge-count" id="pending-count">0</span>
+        </div>
+        <div id="alerts-container" class="alerts-feed">
+          <div class="empty-alerts-card">
+            <div class="check-icon">✓</div>
+            <h4>All Devices Secured</h4>
+            <p>No unrecognized devices attempting access.</p>
+          </div>
+        </div>
+
+        <!-- Live GPS Radar Card -->
+        <div class="insta-card gps-widget-card">
+          <div class="widget-header">
+            <span>📍 Live Phone GPS Posture</span>
+            <button class="btn-gps-ping" onclick="detectMobileGPS()">🎯 Ping GPS</button>
+          </div>
+          <div class="widget-sub" id="mobile-gps-coords">Ready to pinpoint device</div>
+          <div class="map-embed-wrapper">
+            <iframe id="mobile-google-map"
+              src="https://maps.google.com/maps?q=40.7128,-74.0060&hl=en&z=13&output=embed"
+              width="100%"
+              height="130"
+              style="border:0; border-radius: 8px;"
+              allowfullscreen=""
+              loading="lazy">
+            </iframe>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: REGISTERED HARDWARE INVENTORY -->
+      <section class="insta-tab-pane" id="tab-devices">
+        <div class="section-title-bar">
+          <h3>TRUSTED HARDWARE</h3>
+          <button class="insta-icon-btn" onclick="loadMobileData()">🔄 Refresh</button>
+        </div>
+        <div class="devices-feed" id="devices-list">
+          <!-- Populated dynamically -->
+        </div>
+      </section>
+
+      <!-- TAB 4: USER PROFILE & WORK SHIFT CONTROLS -->
+      <section class="insta-tab-pane" id="tab-profile">
+        <div class="profile-card">
+          <div class="profile-avatar">👤</div>
+          <h2 id="profile-username">admin</h2>
+          <span class="profile-role" id="profile-role">SecOps Lead</span>
+          
+          <div class="shift-status-pill" id="profile-shift-badge">
+            Day Shift (09:00 – 18:00)
+          </div>
+
+          <div class="shift-switch-box">
+            <h4>Quick Shift Reassignment:</h4>
+            <div class="shift-btn-grid">
+              <button class="shift-btn" onclick="quickUpdateShift('DAY', 9, 18)">
+                ☀️ Day (09-18)
+              </button>
+              <button class="shift-btn shift-btn-night" onclick="quickUpdateShift('NIGHT', 22, 7)">
+                🌙 Night (22-07)
+              </button>
+              <button class="shift-btn shift-btn-flex" onclick="quickUpdateShift('FLEX_247', 0, 24)">
+                ⚡ 24/7 Flex
+              </button>
+            </div>
+            <p class="shift-hint">Updates SQLite database instantly so off-hours work is never falsely flagged.</p>
+          </div>
+
+          <div class="profile-footer-links">
+            <a href="/" class="link-desktop">↗ Switch to Desktop SOC</a>
+            <button class="btn-logout" onclick="handleLogout()">Sign Out</button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ========================================== -->
+    <!-- 4. FIXED INSTAGRAM LITE BOTTOM NAVIGATION  -->
+    <!-- ========================================== -->
+    <nav class="insta-bottom-nav">
+      <button class="nav-tab-btn active" id="nav-btn-feed" onclick="switchMobileTab('tab-feed')">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-title">Feed</span>
+      </button>
+
+      <button class="nav-tab-btn" id="nav-btn-alerts" onclick="switchMobileTab('tab-alerts')">
+        <div class="nav-icon-wrapper">
+          <span class="nav-icon">🔔</span>
+          <span class="nav-badge" id="nav-alert-badge" style="display:none;">0</span>
+        </div>
+        <span class="nav-title">Alerts</span>
+      </button>
+
+      <button class="nav-tab-btn" id="nav-btn-devices" onclick="switchMobileTab('tab-devices')">
+        <span class="nav-icon">💻</span>
+        <span class="nav-title">Devices</span>
+      </button>
+
+      <button class="nav-tab-btn" id="nav-btn-profile" onclick="switchMobileTab('tab-profile')">
+        <span class="nav-icon">👤</span>
+        <span class="nav-title">Profile</span>
+      </button>
+    </nav>
+
   </div>
 
+  <script src="{{ url_for('static', filename='js/fingerprint.js') }}"></script>
   <script src="{{ url_for('static', filename='js/mobile.js') }}"></script>
 </body>
 </html>

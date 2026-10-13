@@ -38,6 +38,11 @@
           </div>
         </div>
         <div class="header-actions">
+          <div id="auth-header-profile" style="display:none; align-items:center; gap:8px; background:rgba(6,182,212,0.1); border:1px solid rgba(6,182,212,0.3); border-radius:8px; padding:4px 10px; font-size:0.75rem;">
+            <span style="color:#10b981;">●</span>
+            <span id="header-user-display" style="font-weight:600; color:#fff;">Administrator</span>
+            <button onclick="handleLogout()" style="background:transparent; border:none; color:#f87171; cursor:pointer; font-size:0.75rem; text-decoration:underline;">Logout</button>
+          </div>
           <button class="mobile-toggle-btn" onclick="toggleMobileSimulator()">
             📱 <span id="toggle-sim-label">Show Mobile Simulator</span>
             <span class="alert-counter-badge" id="header-alert-count">0</span>
@@ -81,26 +86,14 @@
         </div>
       </div>
 
-      <!-- Scenario Simulator Toolbar -->
-      <div class="simulator-toolbar">
-        <span class="toolbar-title">⚡ Interactive Scenarios:</span>
-        <div class="btn-group">
-          <button class="sim-btn sim-night-safe" onclick="simulateScenario('night_shift_authorized')" title="Demonstrate authorized night-shift worker (No false alarm)">
-            🌙 Night-Shift (Authorized)
-          </button>
-          <button class="sim-btn sim-night-unauth" onclick="simulateScenario('after_dark_unauthorized')" title="Day employee attempting login at 3 AM">
-            ⚠️ Unauthorized Night Login
-          </button>
-          <button class="sim-btn sim-device" onclick="simulateScenario('new_device_intrusion')" title="Intruder tries login from an unrecognized PC (Fires Mobile Push Alert)">
-            📱 New Device Intrusion
-          </button>
-          <button class="sim-btn sim-travel" onclick="simulateScenario('impossible_travel')" title="Logins from London and Tokyo within seconds">
-            ✈️ Impossible Travel
-          </button>
-          <button class="sim-btn sim-brute" onclick="simulateScenario('brute_force')" title="Repeated password guessing">
-            ⚔️ Brute-Force Spray
-          </button>
-          <button class="sim-btn sim-clear" onclick="clearAllData()">
+      <!-- SOC Status & Actions Toolbar -->
+      <div class="soc-toolbar" style="display:flex; justify-content:space-between; align-items:center; margin: 14px 0 16px 0; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:10px 16px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:0.8rem; font-weight:600; color:var(--cyan-accent);">🛡️ SOC DEFENSE STATUS:</span>
+          <span style="font-size:0.75rem; color:var(--text-muted);">Real-Time Event Stream Active • SQLite WAL Concurrency Active</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button class="sim-btn sim-clear" onclick="clearAllData()" style="padding:6px 14px; font-size:0.75rem; cursor:pointer;" title="Reset SQLite Audit Log Entries">
             🗑️ Clear Database Logs
           </button>
         </div>
@@ -210,52 +203,20 @@
             </div>
           </div>
 
-          <!-- Anomaly Simulation Controls -->
-          <div class="anomaly-controls">
-            <div class="controls-title">⚙️ Behavioral Test Toggles:</div>
-
-            <div class="control-row">
-              <label for="sim-city-select">Origin Location:</label>
-              <select id="sim-city-select">
-                <option value="LIVE_GPS" selected>📍 Live Current Location (GPS Auto-Detect)</option>
-                <option value="New York">New York, USA (Corporate HQ)</option>
-                <option value="London">London, UK (Europe Office)</option>
-                <option value="Tokyo">Tokyo, Japan (APAC Branch)</option>
-                <option value="Frankfurt">Frankfurt, Germany (Tor Node)</option>
-                <option value="Moscow">Moscow, Russia (High-Risk Anomaly)</option>
-                <option value="Sydney">Sydney, Australia (Remote Hub)</option>
-              </select>
-            </div>
-
-            <div class="control-row">
-              <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.72rem; color:var(--cyan-accent); margin-top:4px;">
-                <input type="checkbox" id="require-live-gps" checked style="accent-color:var(--cyan-accent);">
-                <span>🛰️ Alert user & request live location on login</span>
-              </label>
-            </div>
-
-            <div class="control-row">
-              <label for="sim-device-select">Device Profile:</label>
-              <select id="sim-device-select">
-                <option value="known_admin" selected>Primary Admin Workstation (Trusted)</option>
-                <option value="known_night">Night-Analyst MacBook (Trusted)</option>
-                <option value="unrecognized_pc">⚠️ Unknown Attacker Laptop (New Device!)</option>
-                <option value="unrecognized_phone">⚠️ Unregistered Android Phone (New Device!)</option>
-              </select>
-            </div>
-
-            <div class="control-row">
-              <label for="sim-time-select">Login Timestamp Hour:</label>
-              <select id="sim-time-select">
-                <option value="real">Real-time (Current Hour)</option>
-                <option value="3" selected>03:22 AM (After Dark Hours)</option>
-                <option value="14">02:22 PM (Day Business Hours)</option>
-                <option value="23">11:30 PM (Late Night Hours)</option>
-              </select>
-            </div>
+          <!-- Real Cryptographic Telemetry Indicator -->
+          <div class="telemetry-status-pill" style="margin-top:12px; background:rgba(6,182,212,0.1); border:1px solid rgba(6,182,212,0.3); border-radius:6px; padding:6px 10px; font-size:0.72rem; color:var(--cyan-accent); display:flex; align-items:center; gap:6px;">
+            <span style="width:6px; height:6px; border-radius:50%; background:#10b981; box-shadow:0 0 6px #10b981;"></span>
+            <span>🔒 Hardware Telemetry Active (SHA-256 Canvas & WebGL Hash)</span>
           </div>
 
-          <button type="submit" class="submit-btn" id="submit-btn">
+          <div class="control-row" style="margin-top:8px;">
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.72rem; color:var(--text-muted);">
+              <input type="checkbox" id="require-live-gps" checked style="accent-color:var(--cyan-accent);">
+              <span>🛰️ Verify with Live Device GPS Geolocation</span>
+            </label>
+          </div>
+
+          <button type="submit" class="submit-btn" id="submit-btn" style="margin-top:14px;">
             <span class="btn-text">SECURE SIGN IN</span>
             <span class="btn-glow"></span>
           </button>
@@ -276,6 +237,34 @@
         <div class="valid-users-hint">
           <strong>Persistent SQLite Users:</strong> <code>admin</code> (Day Shift), <code>night_analyst</code> (Night Shift), <code>remote_dev</code> (24/7 Flex)
         </div>
+      </div>
+
+      <!-- Authenticated Session Card (Shown when signed in) -->
+      <div class="login-card" id="authenticated-card" style="display:none;">
+        <div class="login-header">
+          <div class="shield-badge" style="background:rgba(16,185,129,0.15); border-color:#10b981; color:#10b981;">✓</div>
+          <h2>Session Authenticated</h2>
+          <p id="auth-user-role">SOC Security Specialist</p>
+        </div>
+
+        <div class="auth-session-details" style="background:rgba(15,23,42,0.8); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:14px; margin: 12px 0;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:0.8rem;">
+            <span style="color:var(--text-muted);">Active Operator:</span>
+            <strong id="auth-card-username" style="color:#fff;">admin</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:0.8rem;">
+            <span style="color:var(--text-muted);">Session Cookie:</span>
+            <span style="color:#10b981;">HttpOnly • SameSite Lax</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:0.8rem;">
+            <span style="color:var(--text-muted);">Hardware Entropy:</span>
+            <span style="color:var(--cyan-accent); font-family:var(--font-mono); font-size:0.72rem;">SHA-256 Verified</span>
+          </div>
+        </div>
+
+        <button type="button" class="submit-btn" onclick="handleLogout()" style="background:#dc2626; border:none; margin-top:8px;">
+          <span class="btn-text">SIGN OUT OF SESSION</span>
+        </button>
       </div>
 
       <!-- ======================================================== -->
@@ -380,7 +369,8 @@
 
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <!-- Application Logic -->
+  <!-- Application Logic & Cryptographic Fingerprinting -->
+  <script src="{{ url_for('static', filename='js/fingerprint.js') }}"></script>
   <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>
