@@ -10,17 +10,33 @@ KNOWN_MALICIOUS_IPS = {
     "203.0.113.88": "Automated Attack Scanner (Moscow, RU)"
 }
 
-# City coordinate lookups for live GeoIP map demonstration
-GEO_LOCATIONS = {
-    "New York": {"country": "United States", "city": "New York", "lat": 40.7128, "lon": -74.0060},
-    "London": {"country": "United Kingdom", "city": "London", "lat": 51.5074, "lon": -0.1278},
-    "Tokyo": {"country": "Japan", "city": "Tokyo", "lat": 35.6762, "lon": 139.6503},
-    "Frankfurt": {"country": "Germany", "city": "Frankfurt", "lat": 50.1109, "lon": 8.6821},
-    "Sydney": {"country": "Australia", "city": "Sydney", "lat": -33.8688, "lon": 151.2093},
-    "San Francisco": {"country": "United States", "city": "San Francisco", "lat": 37.7749, "lon": -122.4194},
-    "Singapore": {"country": "Singapore", "city": "Singapore", "lat": 1.3521, "lon": 103.8198},
-    "Moscow": {"country": "Russia", "city": "Moscow", "lat": 55.7558, "lon": 37.6173}
-}
+from geoip_resolver import PRESET_LOCATIONS
+
+GEO_LOCATIONS = PRESET_LOCATIONS
+
+def calculate_shift_deviation(hour, start_hour, end_hour, shift_type):
+    """
+    Calculates minimum circular distance (in hours) between authentication hour
+    and scheduled shift window on a 24-hour clock.
+    Returns: (is_on_shift: bool, deviation_hours: float)
+    """
+    if shift_type == "FLEX_247":
+        return True, 0.0
+
+    if start_hour < end_hour:
+        # Daytime shift (e.g. 09:00 - 18:00)
+        if start_hour <= hour < end_hour:
+            return True, 0.0
+        dist_to_start = min(abs(hour - start_hour), 24 - abs(hour - start_hour))
+        dist_to_end = min(abs(hour - end_hour), 24 - abs(hour - end_hour))
+        return False, float(min(dist_to_start, dist_to_end))
+    else:
+        # Overnight shift (e.g. 22:00 - 07:00)
+        if hour >= start_hour or hour < end_hour:
+            return True, 0.0
+        dist_to_start = min(abs(hour - start_hour), 24 - abs(hour - start_hour))
+        dist_to_end = min(abs(hour - end_hour), 24 - abs(hour - end_hour))
+        return False, float(min(dist_to_start, dist_to_end))
 
 def haversine_distance_km(lat1, lon1, lat2, lon2):
     """Calculates great-circle distance between two points in km."""
@@ -65,14 +81,7 @@ def evaluate_enterprise_threat(
         start_hour = user_record["shift_start_hour"]
         end_hour = user_record["shift_end_hour"]
 
-        if shift_type == "FLEX_247":
-            is_on_shift = True
-        elif start_hour < end_hour:
-            # Daytime shift (e.g. 09:00 - 18:00)
-            is_on_shift = (start_hour <= hour < end_hour)
-        else:
-            # Overnight shift (e.g. 22:00 - 07:00 / Night Owl)
-            is_on_shift = (hour >= start_hour or hour < end_hour)
+        is_on_shift, deviation_hours = calculate_shift_deviation(hour, start_hour, end_hour, shift_type)
 
         if is_on_shift:
             if shift_type == "NIGHT":
@@ -84,14 +93,28 @@ def evaluate_enterprise_threat(
                     "weight": 0
                 })
         else:
+            # Continuous gradient scoring based on shift deviation
+            if deviation_hours <= 1.0:
+                dev_weight = 15
+                dev_sev = "LOW"
+                dev_desc = f"Marginal off-hours access (+{int(deviation_hours)}h deviation from {shift_type} shift schedule {start_hour:02d}:00 - {end_hour:02d}:00)."
+            elif deviation_hours <= 3.0:
+                dev_weight = 25
+                dev_sev = "MEDIUM"
+                dev_desc = f"Off-hours access (+{int(deviation_hours)}h outside approved {shift_type} shift schedule {start_hour:02d}:00 - {end_hour:02d}:00)."
+            else:
+                dev_weight = 35
+                dev_sev = "MEDIUM"
+                dev_desc = f"Authentication at {attempt_time.strftime('%H:%M:%S')} is outside approved {shift_type} shift schedule ({start_hour:02d}:00 - {end_hour:02d}:00) by {int(deviation_hours)} hours."
+
             triggered_rules.append({
                 "code": "SHIFT_VIOLATION",
                 "name": "Shift Schedule Violation Anomaly",
-                "description": f"Authentication at {attempt_time.strftime('%H:%M:%S')} is outside approved {shift_type} shift schedule ({start_hour:02d}:00 - {end_hour:02d}:00).",
-                "severity": "MEDIUM",
-                "weight": 35
+                "description": dev_desc,
+                "severity": dev_sev,
+                "weight": dev_weight
             })
-            risk_score += 35
+            risk_score += dev_weight
     else:
         # Non-existent user
         if not auth_success:
@@ -159,6 +182,24 @@ def evaluate_enterprise_threat(
                         "weight": 65
                     })
                     risk_score += 65
+
+    # Dynamic Behavioral Baseline: Historical Location Profiling
+    if user_record and auth_success:
+        user_past_success = [
+            l for l in recent_logs
+            if l.get("username") == username and l.get("auth_success")
+        ]
+        known_cities = {l.get("city") for l in user_past_success if l.get("city")}
+        if len(known_cities) >= 1 and curr_city not in known_cities:
+            baseline_str = ", ".join(sorted(known_cities))
+            triggered_rules.append({
+                "code": "NEW_LOCATION_ANOMALY",
+                "name": "Unusual Geographic Location",
+                "description": f"First-time authentication from '{curr_city}' for user '{username}'. Known baseline cities: {baseline_str}.",
+                "severity": "MEDIUM",
+                "weight": 20
+            })
+            risk_score += 20
 
     # ------------------------------------------------------------------
     # Pillar 4: Brute-Force & Targeted Credential Spraying

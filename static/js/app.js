@@ -9,11 +9,16 @@ const CITY_COORDS = {
 };
 
 let realUserGPS = null;
+let dashboardSSE = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   initMap();
+  checkAuthSession();
   refreshAll();
-  setInterval(refreshAll, 4000);
+  initDashboardSSE();
+
+  // Low-frequency fallback sync (30s) while SSE provides <100ms real-time push
+  setInterval(refreshAll, 30000);
 
   // Setup city dropdown sync with Google Maps
   const citySelect = document.getElementById('sim-city-select');
@@ -30,6 +35,42 @@ document.addEventListener('DOMContentLoaded', () => {
   setInterval(updatePhoneClock, 1000);
   updatePhoneClock();
 });
+
+function initDashboardSSE() {
+  if (!window.EventSource) return;
+
+  dashboardSSE = new EventSource('/api/events/stream');
+
+  dashboardSSE.onmessage = (e) => {
+    try {
+      const evt = JSON.parse(e.data);
+      if (evt.type === 'AUTH_LOG') {
+        fetchStats();
+        fetchLogs();
+        if (evt.data && evt.data.log) {
+          const l = evt.data.log;
+          if (l.lat && l.lon) {
+            plotMapMarker(l.lat, l.lon, l.city, l.country, l.risk_score, l.classification, l.username, l.ip);
+          }
+        }
+      } else if (evt.type === 'NEW_DEVICE_ALERT' || evt.type === 'DEVICE_RESOLVED' || evt.type === 'DEVICE_ACTION') {
+        fetchStats();
+        fetchDevices();
+        fetchMobileAlerts();
+      } else if (evt.type === 'SHIFT_UPDATED') {
+        fetchUsers();
+      }
+    } catch (err) {
+      console.warn('Dashboard SSE parse error:', err);
+    }
+  };
+
+  dashboardSSE.onerror = (err) => {
+    console.warn('Dashboard SSE interrupted, reconnecting in 5s...');
+    if (dashboardSSE) dashboardSSE.close();
+    setTimeout(initDashboardSSE, 5000);
+  };
+}
 
 function updatePhoneClock() {
   const clock = document.getElementById('phone-clock');
@@ -346,96 +387,114 @@ async function handleLogin(e) {
 
   const username = document.getElementById('username').value.trim();
   const password = document.getElementById('password').value;
-  const city = document.getElementById('sim-city-select').value;
-  const devSelect = document.getElementById('sim-device-select').value;
-  const timeSelect = document.getElementById('sim-time-select').value;
-  const simulatedHour = timeSelect === 'real' ? null : parseInt(timeSelect, 10);
   const requireGPS = document.getElementById('require-live-gps')?.checked;
 
-  // Real-time Device Detection (Laptop/Desktop vs Smartphone)
-  const isMobileClient = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-  let detectedType = isMobileClient ? "Mobile" : "Desktop";
-  let detectedBrowser = navigator.userAgent.includes("Chrome") ? "Chrome" : (navigator.userAgent.includes("Firefox") ? "Firefox" : "Safari");
-  let detectedOS = navigator.platform || (isMobileClient ? "Mobile OS" : "Desktop OS");
+  const simDetails = document.getElementById('sim-details');
+  const isSimulationOpen = simDetails && simDetails.open;
 
-  // Device Profile Based on Selector
-  let device_fp = "fp-admin-workstation-lin-01";
-  let device_name = `${detectedType} (${detectedBrowser})`;
-  let device_type = detectedType;
-  let browser = detectedBrowser;
-  let os = detectedOS;
+  let is_simulation = false;
+  let device_fp = "fp-client-browser-default";
+  let device_name = "Desktop Workstation";
+  let device_type = "Desktop";
+  let browser = "Chrome";
+  let os = "Linux";
+  let simulatedHour = null;
 
-  if (devSelect === 'known_admin') {
-    device_fp = "fp-admin-workstation-lin-01";
-    device_name = "Admin Primary Workstation";
-  } else if (devSelect === 'known_night') {
-    device_fp = "fp-night-laptop-mac-01";
-    device_name = "Night Owl Ops MacBook";
-    os = "macOS Sonoma";
-  } else if (devSelect === 'unrecognized_pc') {
-    device_fp = `fp-unrecognized-laptop-${Math.floor(Math.random() * 9000 + 1000)}`;
-    device_name = "Alienware Linux (Unrecognized)";
-    browser = "Firefox 124";
-  } else if (devSelect === 'unrecognized_phone') {
-    device_fp = `fp-mobile-android-${Math.floor(Math.random() * 9000 + 1000)}`;
-    device_name = "Samsung Galaxy S24 (Unregistered)";
-    device_type = "Mobile";
-    os = "Android 14";
+  // 1. Extract Genuine Cryptographic Device Fingerprint
+  try {
+    if (window.DeviceFingerprinter) {
+      const realFpData = await window.DeviceFingerprinter.getFingerprint();
+      device_fp = realFpData.fingerprint;
+      device_name = realFpData.deviceName;
+      device_type = realFpData.deviceName.includes("Mobile") ? "Mobile" : "Desktop";
+    }
+  } catch (fpErr) {
+    console.warn("Fingerprint extraction error:", fpErr);
   }
 
-  // --- LIVE LOCATION ACQUISITION WITH PERMISSION ALERT ---
+  // 2. Apply Simulation Overrides only if simulation accordion is open
+  const devSelect = document.getElementById('sim-device-select')?.value;
+  const timeSelect = document.getElementById('sim-time-select')?.value;
+  const citySelect = document.getElementById('sim-city-select')?.value;
+
+  if (isSimulationOpen) {
+    if (timeSelect && timeSelect !== 'real') {
+      simulatedHour = parseInt(timeSelect, 10);
+      is_simulation = true;
+    }
+
+    if (devSelect && devSelect !== 'real_device') {
+      is_simulation = true;
+      if (devSelect === 'known_admin') {
+        device_fp = "fp-admin-workstation-lin-01";
+        device_name = "Admin Primary Workstation";
+      } else if (devSelect === 'known_night') {
+        device_fp = "fp-night-laptop-mac-01";
+        device_name = "Night Owl Ops MacBook";
+        os = "macOS Sonoma";
+      } else if (devSelect === 'unrecognized_pc') {
+        device_fp = `fp-unrecognized-laptop-${Math.floor(Math.random() * 9000 + 1000)}`;
+        device_name = "Alienware Linux (Unrecognized)";
+        browser = "Firefox 124";
+      } else if (devSelect === 'unrecognized_phone') {
+        device_fp = `fp-mobile-android-${Math.floor(Math.random() * 9000 + 1000)}`;
+        device_name = "Samsung Galaxy S24 (Unregistered)";
+        device_type = "Mobile";
+        os = "Android 14";
+      }
+    }
+  }
+
+  // --- LOCATION ACQUISITION ---
   let activeLat = null;
   let activeLon = null;
-  let cityReporting = city;
+  let cityReporting = "Live Device (Auto-Detect)";
+  let customIp = undefined;
 
-  if (city === 'LIVE_GPS' || requireGPS) {
-    // Alert prompt to user as required
-    alert("🔐 Live Location Security Check:\n\nWe need your live device location (laptop, computer, or mobile) to verify login authenticity.\n\nPlease grant location permission when prompted by your browser.");
-
+  if (isSimulationOpen && citySelect && citySelect !== 'REAL_AUTO') {
+    is_simulation = true;
+    cityReporting = citySelect;
+    if (CITY_COORDS[citySelect]) {
+      activeLat = CITY_COORDS[citySelect].lat;
+      activeLon = CITY_COORDS[citySelect].lon;
+      updateGoogleDeviceMap(activeLat, activeLon, CITY_COORDS[citySelect].label, "Simulation Selected");
+    }
+    if (citySelect === "Frankfurt") customIp = "185.220.101.5";
+    if (citySelect === "Moscow") customIp = "203.0.113.88";
+  } else if (requireGPS) {
     try {
       const pos = await getLiveCoordinates();
       activeLat = pos.coords.latitude;
       activeLon = pos.coords.longitude;
       const acc = Math.round(pos.coords.accuracy || 10);
       cityReporting = `Live Device GPS (${activeLat.toFixed(3)}, ${activeLon.toFixed(3)})`;
-      
       updateGoogleDeviceMap(activeLat, activeLon, "Your Real Device (Live GPS)", "Live Location Verified", "val-safe", `±${acc}m accuracy`);
     } catch (gpsErr) {
-      console.warn("Live GPS error:", gpsErr);
-      alert("⚠️ Notice: Location permission was not granted or GPS unavailable. Proceeding with network/IP baseline fallback.");
-      if (CITY_COORDS[city]) {
-        activeLat = CITY_COORDS[city].lat;
-        activeLon = CITY_COORDS[city].lon;
-      }
+      console.warn("GPS unavailable, fallback to network IP:", gpsErr);
     }
-  } else if (CITY_COORDS[city]) {
-    activeLat = CITY_COORDS[city].lat;
-    activeLon = CITY_COORDS[city].lon;
   }
 
-  // Choose representative IP
-  let ip = "192.168.1.105";
-  if (city === "Frankfurt") ip = "185.220.101.5"; // Known Tor
-  if (city === "Moscow") ip = "203.0.113.88"; // Threat
-
   try {
+    const payload = {
+      username,
+      password,
+      is_simulation,
+      city: cityReporting,
+      lat: activeLat,
+      lon: activeLon,
+      device_fingerprint: device_fp,
+      device_name,
+      device_type,
+      browser,
+      os,
+      simulated_hour: simulatedHour
+    };
+    if (is_simulation && customIp) payload.ip = customIp;
+
     const res = await fetch('/api/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username,
-        password,
-        ip,
-        city: cityReporting,
-        lat: activeLat,
-        lon: activeLon,
-        device_fingerprint: device_fp,
-        device_name,
-        device_type,
-        browser,
-        os,
-        simulated_hour: simulatedHour
-      })
+      body: JSON.stringify(payload)
     });
 
     const data = await res.json();

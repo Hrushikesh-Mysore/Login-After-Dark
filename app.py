@@ -1,7 +1,9 @@
 import os
 import time
-from datetime import datetime
-from flask import Flask, render_template, request, jsonify
+import secrets
+from datetime import datetime, timedelta
+from functools import wraps
+from flask import Flask, render_template, request, jsonify, session, Response
 
 from database import (
     get_user_by_username,
@@ -27,9 +29,26 @@ from detection_engine import (
     GEO_LOCATIONS,
     KNOWN_MALICIOUS_IPS
 )
+from geoip_resolver import resolve_ip_location
+from rate_limiter import rate_limit, login_rate_limiter
+from event_stream import event_dispatcher
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'enterprise-login-after-dark-secure-key-2026'
+# Load secret key from environment or generate a secure random hex key
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = os.environ.get('FLASK_ENV') == 'production'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=4)
+
+def login_required(f):
+    """Decorator ensuring request has an active authenticated session."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get("user_id"):
+            return jsonify({"error": "Unauthorized", "message": "Authentication required. Please sign in."}), 401
+        return f(*args, **kwargs)
+    return decorated_function
 
 # --- Web Page Routes ---
 
@@ -43,19 +62,50 @@ def mobile_view():
     """Dedicated Mobile Companion Security App for Smartphones."""
     return render_template("mobile.html")
 
+# --- Real-Time Server-Sent Events (SSE) Stream ---
+
+@app.route("/api/events/stream", methods=["GET"])
+def api_events_stream():
+    """Real-time SSE event stream for instantaneous alerts and dashboard synchronization."""
+    client_queue = event_dispatcher.subscribe()
+    return Response(
+        event_dispatcher.stream(client_queue),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive"
+        }
+    )
+
 # --- Authentication & Threat Detection API ---
 
 @app.route("/api/login", methods=["POST"])
+@rate_limit(login_rate_limiter)
 def api_login():
     data = request.get_json() or {}
 
     username = (data.get("username") or "").strip()
     password = data.get("password") or ""
-    custom_ip = (data.get("ip") or "").strip()
-    client_ip = custom_ip if custom_ip else (request.headers.get("X-Forwarded-For", request.remote_addr) or "127.0.0.1")
+    is_simulation = bool(data.get("is_simulation", False))
+
+    # Anti-spoofing: enforce server-verified connection IP unless explicit simulation or test
+    if is_simulation or app.config.get("TESTING"):
+        custom_ip = (data.get("ip") or "").strip()
+        client_ip = custom_ip if custom_ip else (
+            request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
+            or request.remote_addr
+            or "127.0.0.1"
+        )
+    else:
+        client_ip = (
+            request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
+            or request.remote_addr
+            or "127.0.0.1"
+        )
     
     simulated_hour = data.get("simulated_hour")
-    city_selection = data.get("city") or "New York"
+    city_selection = data.get("city")
     
     device_fp = data.get("device_fingerprint") or "fp-client-browser-default"
     device_name = data.get("device_name") or "Web Browser"
@@ -63,14 +113,14 @@ def api_login():
     browser = data.get("browser") or "Chrome"
     os_name = data.get("os") or "Linux"
 
-    # Geo coordinates (supports live GPS from laptops/phones or preset cities)
+    # Geo coordinates (supports live GPS from laptops/phones, preset cities, or dynamic GeoIP)
     custom_lat = data.get("lat")
     custom_lon = data.get("lon")
     if custom_lat is not None and custom_lon is not None:
         try:
             lat_val = float(custom_lat)
             lon_val = float(custom_lon)
-            city_name = data.get("city_name") or (f"Live GPS ({lat_val:.2f}, {lon_val:.2f})" if city_selection == "GPS" else city_selection)
+            city_name = data.get("city_name") or (f"Live GPS ({lat_val:.2f}, {lon_val:.2f})" if city_selection == "GPS" else (city_selection or "GPS Location"))
             country_name = data.get("country_name") or "Local Device GPS"
             geo = {
                 "country": country_name,
@@ -79,9 +129,9 @@ def api_login():
                 "lon": lon_val
             }
         except (ValueError, TypeError):
-            geo = GEO_LOCATIONS.get(city_selection, GEO_LOCATIONS["New York"])
+            geo = resolve_ip_location(client_ip, city_hint=city_selection)
     else:
-        geo = GEO_LOCATIONS.get(city_selection, GEO_LOCATIONS["New York"])
+        geo = resolve_ip_location(client_ip, city_hint=city_selection)
 
     # Determine attempt time
     now = datetime.now()
@@ -194,11 +244,48 @@ def api_login():
     }
     record_log(log_entry)
 
+    # Real-Time Event Broadcast (<100ms push to connected browsers)
+    event_dispatcher.broadcast("AUTH_LOG", {
+        "log": log_entry,
+        "evaluation": {
+            "risk_score": risk_score,
+            "classification": classification,
+            "triggered_rules": triggered_rules,
+            "timestamp": log_entry["timestamp"],
+            "ip": client_ip,
+            "location": geo,
+            "device": device_info,
+            "is_new_device": is_new_device,
+            "alert_dispatched": created_alert_id is not None,
+            "alert_id": created_alert_id
+        },
+        "stats": get_stats()
+    })
+
+    if is_new_device and created_alert_id:
+        event_dispatcher.broadcast("NEW_DEVICE_ALERT", {
+            "id": created_alert_id,
+            "user_id": user_record["id"] if user_record else 0,
+            "username": username,
+            "device_name": device_name,
+            "ip": client_ip,
+            "location": f"{geo['city']}, {geo['country']}",
+            "severity": "HIGH" if classification == "CRITICAL" else "MEDIUM",
+            "created_at": attempt_time.strftime("%Y-%m-%d %H:%M:%S")
+        })
+
     # Generate user-facing message
     if is_device_blocked:
         message = "Access Denied: This device has been blocked by security policy."
         http_code = 403
     elif auth_success:
+        if user_record:
+            u_dict = dict(user_record)
+            session.permanent = True
+            session["user_id"] = u_dict["id"]
+            session["username"] = u_dict["username"]
+            session["role"] = u_dict.get("role", "Analyst")
+            session["display_name"] = u_dict.get("display_name", u_dict["username"])
         message = "Authentication successful. Access granted."
         http_code = 200
     else:
@@ -222,6 +309,29 @@ def api_login():
         }
     }), http_code
 
+# --- Session & Authentication Verification APIs ---
+
+@app.route("/api/auth/me", methods=["GET"])
+def api_auth_me():
+    """Return currently authenticated user session details."""
+    if not session.get("user_id"):
+        return jsonify({"authenticated": False, "user": None})
+    return jsonify({
+        "authenticated": True,
+        "user": {
+            "id": session.get("user_id"),
+            "username": session.get("username"),
+            "role": session.get("role"),
+            "display_name": session.get("display_name")
+        }
+    })
+
+@app.route("/api/auth/logout", methods=["POST"])
+def api_auth_logout():
+    """Terminate current user session."""
+    session.clear()
+    return jsonify({"status": "success", "message": "Session terminated successfully."})
+
 # --- Management & Operational APIs ---
 
 @app.route("/api/stats", methods=["GET"])
@@ -240,6 +350,11 @@ def api_users():
 def api_update_shift():
     data = request.get_json() or {}
     user_id = data.get("user_id")
+    if not user_id and data.get("username"):
+        u = get_user_by_username(data.get("username"))
+        if u:
+            user_id = u["id"]
+
     shift_type = data.get("shift_type", "DAY")
     start_hour = int(data.get("shift_start_hour", 9))
     end_hour = int(data.get("shift_end_hour", 18))
@@ -248,6 +363,12 @@ def api_update_shift():
         return jsonify({"error": "User ID required"}), 400
 
     update_user_shift(user_id, shift_type, start_hour, end_hour)
+    event_dispatcher.broadcast("SHIFT_UPDATED", {
+        "user_id": user_id,
+        "shift_type": shift_type,
+        "shift_start_hour": start_hour,
+        "shift_end_hour": end_hour
+    })
     return jsonify({"status": "success", "message": "User shift schedule updated"})
 
 @app.route("/api/devices", methods=["GET"])
@@ -280,9 +401,11 @@ def api_device_action():
 
     if action == "BLOCK":
         set_device_block_status(device_id, is_blocked=1)
+        event_dispatcher.broadcast("DEVICE_ACTION", {"device_id": device_id, "action": action, "stats": get_stats()})
         return jsonify({"status": "success", "message": "Device blocked successfully"})
     elif action == "TRUST":
         set_device_block_status(device_id, is_blocked=0)
+        event_dispatcher.broadcast("DEVICE_ACTION", {"device_id": device_id, "action": action, "stats": get_stats()})
         return jsonify({"status": "success", "message": "Device marked as trusted"})
     return jsonify({"error": "Invalid action"}), 400
 
@@ -304,6 +427,7 @@ def api_mobile_action():
 
     success, msg = resolve_alert(alert_id, action)
     if success:
+        event_dispatcher.broadcast("DEVICE_RESOLVED", {"alert_id": alert_id, "action": action, "stats": get_stats()})
         return jsonify({"status": "success", "message": msg})
     return jsonify({"error": msg}), 400
 
@@ -455,4 +579,6 @@ def api_clear():
     return jsonify({"status": "cleared", "message": "Audit logs and alert queues cleared."})
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    debug_mode = os.environ.get("FLASK_DEBUG", "false").lower() in ("true", "1", "yes")
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=debug_mode)
