@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login After Dark — Quick Launch Hub</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #070b14;
+      --card-bg: rgba(15, 23, 42, 0.9);
+      --card-border: rgba(30, 41, 59, 0.9);
+      --cyan: #06b6d4;
+      --cyan-glow: rgba(6, 182, 212, 0.3);
+      --purple: #8b5cf6;
+      --purple-glow: rgba(139, 92, 246, 0.3);
+      --emerald: #10b981;
+      --red: #ef4444;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(6, 182, 212, 0.15) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.15) 0px, transparent 50%),
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 32px 32px, 32px 32px;
+      color: var(--text);
+      font-family: 'Inter', -apple-system, sans-serif;
+      min-height: 100vh;
+      padding: 2.5rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1000px;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    .header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.5rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .logo-badge {
+      width: 54px;
+      height: 54px;
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(139, 92, 246, 0.2));
+      border: 1px solid var(--cyan);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.75rem;
+      box-shadow: 0 0 20px var(--cyan-glow);
+    }
+
+    .brand-title {
+      font-size: 1.75rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #ffffff 40%, var(--cyan) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-subtitle {
+      color: var(--muted);
+      font-size: 0.875rem;
+      font-family: 'Fira Code', monospace;
+      margin-top: 2px;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      font-size: 0.8125rem;
+      font-family: 'Fira Code', monospace;
+      transition: all 0.3s ease;
+    }
+
+    .status-online {
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: var(--emerald);
+    }
+
+    .status-offline {
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: var(--red);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    .dot-online {
+      background-color: var(--emerald);
+      box-shadow: 0 0 10px var(--emerald);
+    }
+
+    .dot-offline {
+      background-color: var(--red);
+      box-shadow: 0 0 10px var(--red);
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.9); }
+    }
+
+    /* Offline Alert */
+    .offline-banner {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 14px;
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      color: #fca5a5;
+    }
+
+    .code-box {
+      background: #020617;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.85rem;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* Grid layout */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 18px;
+      padding: 1.75rem;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      transition: all 0.25s ease;
+    }
+
+    .card:hover {
+      border-color: rgba(6, 182, 212, 0.4);
+      transform: translateY(-2px);
+    }
+
+    .card-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+    }
+
+    .card-desc {
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.625rem;
+      padding: 0.875rem 1.5rem;
+      border-radius: 12px;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      border: none;
+      font-family: inherit;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #06b6d4, #0284c7);
+      color: #ffffff;
+      box-shadow: 0 4px 15px var(--cyan-glow);
+    }
+
+    .btn-purple {
+      background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+      color: #ffffff;
+      box-shadow: 0 4px 15px var(--purple-glow);
+    }
+
+    .btn-secondary {
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      color: var(--text);
+    }
+
+    .runner-box {
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.7));
+      border: 1px solid rgba(6, 182, 212, 0.35);
+      border-radius: 20px;
+      padding: 1.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .mobile-box {
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(88, 28, 135, 0.15));
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-radius: 20px;
+      padding: 1.75rem;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 1.75rem;
+      align-items: center;
+    }
+
+    @media (max-width: 768px) {
+      .mobile-box {
+        grid-template-columns: 1fr;
+        justify-items: center;
+      }
+    }
+
+    .qr-card {
+      background: #ffffff;
+      padding: 0.875rem;
+      border-radius: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    #qrcode img, #qrcode canvas {
+      width: 150px;
+      height: 150px;
+      display: block;
+    }
+
+    .qr-caption {
+      color: #0f172a;
+      font-size: 0.725rem;
+      font-weight: 700;
+      font-family: 'Fira Code', monospace;
+    }
+
+    .terminal-output {
+      background: #020617;
+      border: 1px solid rgba(30, 41, 59, 0.8);
+      border-radius: 12px;
+      padding: 1rem;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.8rem;
+      color: #38bdf8;
+      max-height: 160px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+
+    <!-- Header -->
+    <header class="header">
+      <div class="brand-group">
+        <div class="logo-badge">🌙</div>
+        <div>
+          <h1 class="brand-title">LOGIN AFTER DARK</h1>
+          <p class="brand-subtitle">Quick Launch Hub & Mission Control</p>
+        </div>
+      </div>
+      <div id="status-pill" class="status-pill status-offline">
+        <span id="status-dot" class="status-dot dot-offline"></span>
+        <span id="status-text">CHECKING SERVER...</span>
+      </div>
+    </header>
+
+    <!-- Offline Alert Banner (shown if server is not yet running) -->
+    <div id="offline-banner" class="offline-banner" style="display: none;">
+      <div style="font-weight: 700; font-size: 1.05rem;">⚠️ Flask Backend Server is not running</div>
+      <p style="font-size: 0.9rem; color: #cbd5e1;">
+        To activate the live backend and start receiving real-time SSE threat alerts, run this command in your terminal or double-click <code>launch.sh</code>:
+      </p>
+      <div class="code-box">
+        <span>./launch.sh</span>
+        <button class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.75rem;" onclick="copyCommand()">📋 Copy</button>
+      </div>
+    </div>
+
+    <!-- Dual Quick Launch Cards -->
+    <div class="grid-2">
+      
+      <!-- Card 1: SOC Dashboard -->
+      <div class="card">
+        <h2 class="card-title">🖥️ Desktop SOC Center</h2>
+        <p class="card-desc">
+          Live Enterprise SOC Threat Command Center with real-time SSE stream, interactive Leaflet GeoIP threat map, continuous shift gradient calculation, and hardware canvas fingerprinting.
+        </p>
+        <div style="display: flex; gap: 0.75rem; margin-top: auto;">
+          <a href="http://localhost:5000/" target="_blank" class="btn btn-primary" style="flex: 1;">
+            🚀 Open Localhost (Port 5000)
+          </a>
+        </div>
+      </div>
+
+      <!-- Card 2: Mobile Guardian Companion -->
+      <div class="card">
+        <h2 class="card-title">📱 Mobile Guardian PWA</h2>
+        <p class="card-desc">
+          Instagram Lite-style smartphone security companion. Instant intrusion alerts, audio/haptic vibration triggers, 1-tap device blocking, and PWA standalone home screen install.
+        </p>
+        <div style="display: flex; gap: 0.75rem; margin-top: auto;">
+          <a href="http://localhost:5000/mobile" target="_blank" class="btn btn-purple" style="flex: 1;">
+            📱 Open Mobile View
+          </a>
+          <a href="http://localhost:5000/launcher" target="_blank" class="btn btn-secondary">
+            Full Launcher ↗
+          </a>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ⚡ EXECUTE ALL TASKS AT ONCE BUTTON -->
+    <div class="runner-box">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <h2 style="font-size: 1.25rem; font-weight: 700;">⚡ Execute All Tasks At Once</h2>
+          <p class="card-desc">Trigger all 6 cyber threat & anomaly scenarios sequentially across the network.</p>
+        </div>
+        <button id="btn-run-all" class="btn btn-primary" onclick="executeAllTasks()">
+          ⚡ Run All 6 Scenarios
+        </button>
+      </div>
+
+      <div id="terminal-log" class="terminal-output"></div>
+    </div>
+
+    <!-- 📲 MOBILE PHONE INSTALLATION SECTION -->
+    <div class="mobile-box">
+      <div class="qr-card">
+        <div id="qrcode"></div>
+        <span class="qr-caption">SCAN WITH PHONE</span>
+      </div>
+      <div>
+        <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem;">📲 Install on Your Smartphone</h2>
+        <p class="card-desc" style="margin-bottom: 0.75rem;">
+          Connect your phone to the same local Wi-Fi, then scan the QR code above or open the URL in Chrome (Android) or Safari (iOS).
+        </p>
+        <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(6, 182, 212, 0.3); padding: 0.6rem 1rem; border-radius: 10px; font-family: 'Fira Code', monospace; font-size: 0.85rem; color: var(--cyan); margin-bottom: 0.75rem;">
+          <span id="mobile-url-display">http://localhost:5000/mobile</span>
+        </div>
+        <p class="card-desc" style="font-size: 0.8rem;">
+          Tap <strong>⋮ &rarr; Add to Home screen</strong> (Android) or <strong>Share &rarr; Add to Home Screen</strong> (iOS) to install as a native standalone app!
+        </p>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="static/js/qrcode.min.js"></script>
+  <script>
+    let localLanIp = "127.0.0.1";
+    let serverOnline = false;
+
+    async function checkServerStatus() {
+      const pill = document.getElementById('status-pill');
+      const dot = document.getElementById('status-dot');
+      const text = document.getElementById('status-text');
+      const banner = document.getElementById('offline-banner');
+
+      try {
+        const resp = await fetch('http://localhost:5000/api/network-info', { mode: 'cors' });
+        if (resp.ok) {
+          const data = await resp.json();
+          localLanIp = data.local_ip;
+          serverOnline = true;
+          pill.className = "status-pill status-online";
+          dot.className = "status-dot dot-online";
+          text.innerText = `SERVER ONLINE • LAN: ${localLanIp}:5000`;
+          banner.style.display = 'none';
+
+          const mobileUrl = data.mobile_lan_url || `http://${localLanIp}:5000/mobile`;
+          document.getElementById('mobile-url-display').innerText = mobileUrl;
+          renderQrCode(mobileUrl);
+          return;
+        }
+      } catch (err) {
+        // Server offline
+      }
+
+      serverOnline = false;
+      pill.className = "status-pill status-offline";
+      dot.className = "status-dot dot-offline";
+      text.innerText = "SERVER OFFLINE • CLICK launch.sh";
+      banner.style.display = 'block';
+      renderQrCode("http://localhost:5000/mobile");
+    }
+
+    let qrRendered = false;
+    function renderQrCode(url) {
+      if (qrRendered) return;
+      const qrEl = document.getElementById('qrcode');
+      if (qrEl && typeof QRCode !== 'undefined') {
+        qrEl.innerHTML = '';
+        new QRCode(qrEl, {
+          text: url,
+          width: 150,
+          height: 150,
+          colorDark: "#070b14",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.M
+        });
+        qrRendered = true;
+      }
+    }
+
+    function copyCommand() {
+      navigator.clipboard.writeText('./launch.sh').then(() => alert("Command './launch.sh' copied to clipboard!"));
+    }
+
+    async function executeAllTasks() {
+      const btn = document.getElementById('btn-run-all');
+      const terminal = document.getElementById('terminal-log');
+
+      if (!serverOnline) {
+        alert("Server is offline! Please run ./launch.sh first.");
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerText = "⚡ Running All Tasks...";
+      terminal.style.display = 'block';
+      terminal.innerText = `[${new Date().toLocaleTimeString()}] Executing all 6 threat and anomaly scenarios...\n`;
+
+      try {
+        const resp = await fetch('http://localhost:5000/api/simulate/run-all', { method: 'POST' });
+        const data = await resp.json();
+        if (data.results) {
+          data.results.forEach((r, idx) => {
+            terminal.innerText += `  [${idx+1}/6] ${r.name} -> Classification: ${r.result?.classification || 'OK'}\n`;
+            if (r.alert_id) {
+              terminal.innerText += `       🚨 Mobile Push Alert #${r.alert_id} dispatched!\n`;
+            }
+          });
+        }
+        terminal.innerText += `[${new Date().toLocaleTimeString()}] ✅ ALL TASKS COMPLETED SUCCESSFULLY!\n`;
+      } catch (err) {
+        terminal.innerText += `❌ Error: ${err.message}\n`;
+      }
+
+      btn.disabled = false;
+      btn.innerText = "✔ Tasks Executed (Run Again)";
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      checkServerStatus();
+      setInterval(checkServerStatus, 3000);
+    });
+  </script>
+</body>
+</html>

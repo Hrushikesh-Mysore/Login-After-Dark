@@ -13,6 +13,13 @@ document.addEventListener('DOMContentLoaded', () => {
   if ('Notification' in window && Notification.permission === 'default') {
     Notification.requestPermission();
   }
+
+  // Register PWA Service Worker for standalone installability
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/static/sw.js')
+      .then(reg => console.log('Guardian Lite Service Worker registered:', reg.scope))
+      .catch(err => console.warn('Service Worker registration skipped:', err));
+  }
 });
 
 let eventSource = null;

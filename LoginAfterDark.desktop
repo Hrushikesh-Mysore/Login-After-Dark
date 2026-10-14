@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Login After Dark
+GenericName=Security Command Center
+Comment=Enterprise Threat Detection & Mobile Authorization Architecture
+Exec=/bin/bash /home/hrushikesh/Projects/Personal/Login-After-Dark/launch.sh
+Icon=/home/hrushikesh/Projects/Personal/Login-After-Dark/static/img/icon-512.png
+Terminal=true
+Categories=Development;Security;Network;
+StartupNotify=true

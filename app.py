@@ -1,5 +1,6 @@
 import os
 import time
+import socket
 import secrets
 from datetime import datetime, timedelta
 from functools import wraps
@@ -50,6 +51,17 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def get_local_lan_ip():
+    """Resolves host machine's actual local area network (LAN) IP for mobile companion connectivity."""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(('8.8.8.8', 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return '127.0.0.1'
+
 # --- Web Page Routes ---
 
 @app.route("/")
@@ -61,6 +73,28 @@ def index():
 def mobile_view():
     """Dedicated Mobile Companion Security App for Smartphones."""
     return render_template("mobile.html")
+
+@app.route("/launcher")
+def launcher_view():
+    """Mission Control Hub & 1-Click Multi-Device Demo Launcher."""
+    local_ip = get_local_lan_ip()
+    port = int(os.environ.get("PORT", 5000))
+    return render_template("launcher.html", local_ip=local_ip, port=port)
+
+@app.route("/api/network-info", methods=["GET"])
+def api_network_info():
+    """Returns host LAN coordinates for auto-discovery and mobile QR codes."""
+    local_ip = get_local_lan_ip()
+    port = int(os.environ.get("PORT", 5000))
+    return jsonify({
+        "status": "online",
+        "local_ip": local_ip,
+        "port": port,
+        "soc_url": f"http://localhost:{port}/",
+        "mobile_local_url": f"http://localhost:{port}/mobile",
+        "mobile_lan_url": f"http://{local_ip}:{port}/mobile",
+        "launcher_url": f"http://localhost:{port}/launcher"
+    })
 
 # --- Real-Time Server-Sent Events (SSE) Stream ---
 
@@ -433,11 +467,8 @@ def api_mobile_action():
 
 # --- Attack & Demonstration Scenarios ---
 
-@app.route("/api/simulate", methods=["POST"])
-def api_simulate():
-    data = request.get_json() or {}
-    scenario = data.get("scenario")
-
+def execute_scenario(scenario: str):
+    """Executes a single cybersecurity anomaly or attack scenario."""
     if scenario == "night_shift_authorized":
         # Feature: Night-Shift worker login during night (03:15 AM)
         # Expected: Clean baseline, NO false-positive!
@@ -460,7 +491,7 @@ def api_simulate():
             "details": "Authorized night-shift login by night_analyst at 03:15 AM. Approved schedule."
         }
         record_log(entry)
-        return jsonify({"scenario": scenario, "result": entry})
+        return {"scenario": scenario, "name": "Night Shift Authorized (Approved Schedule)", "result": entry}
 
     elif scenario == "after_dark_unauthorized":
         # Feature: Day-worker (admin) logging in during off-hours (03:15 AM)
@@ -484,36 +515,30 @@ def api_simulate():
             "details": "Unauthorized off-hours access attempt by day-shift worker 'admin'."
         }
         record_log(entry)
-        return jsonify({"scenario": scenario, "result": entry})
+        return {"scenario": scenario, "name": "After Dark Unauthorized (Off-Hours Breach)", "result": entry}
 
-    elif scenario == "new_device_intrusion":
-        # Feature: Attacker tries logging into admin's account from an unknown device
-        # Expected: NEW_DEVICE_DETECTED + Push Alert to Mobile!
+    elif scenario == "tor_exit_node":
+        # Feature: Anonymized breach attempt from known Tor exit relay
         user = get_user_by_username("admin")
         t = datetime.now()
-        geo = GEO_LOCATIONS["Moscow"]
-        unknown_fp = f"fp-unrecognized-hacker-{int(time.time())}"
-        unknown_name = "Firefox on Linux (Unknown)"
-        dev_info = {"fingerprint": unknown_fp, "name": unknown_name, "is_known": False, "is_blocked": False}
-        
+        geo = GEO_LOCATIONS["Frankfurt"]
+        tor_ip = "185.220.101.5"
+        dev_info = {"fingerprint": "fp-tor-browser-anon", "name": "Tor Browser 13.0 on Linux", "is_known": False, "is_blocked": False}
         risk, classif, rules = evaluate_enterprise_threat(
-            user_record=user, username="admin", ip="203.0.113.88", auth_success=False,
+            user_record=user, username="admin", ip=tor_ip, auth_success=False,
             device_info=dev_info, location_info=geo, attempt_time=t, recent_logs=get_recent_logs(20)
         )
-        register_device(user["id"], unknown_fp, unknown_name, "Desktop", "Firefox", "Linux", is_trusted=0, is_blocked=0)
-        alert_id = create_device_alert(user["id"], "admin", unknown_fp, unknown_name, "203.0.113.88", f"{geo['city']}, {geo['country']}", "HIGH")
-        
         entry = {
             "timestamp": t.strftime("%Y-%m-%d %H:%M:%S"), "epoch": time.time(),
-            "username": "admin", "ip": "203.0.113.88", "country": geo["country"],
+            "username": "admin", "ip": tor_ip, "country": geo["country"],
             "city": geo["city"], "lat": geo["lat"], "lon": geo["lon"],
-            "device_name": unknown_name, "device_fingerprint": unknown_fp,
+            "device_name": dev_info["name"], "device_fingerprint": dev_info["fingerprint"],
             "is_new_device": True, "auth_success": False, "risk_score": risk,
             "classification": classif, "triggered_rules": rules,
-            "details": f"Intrusion attempt from new unrecognized device. Dispatched mobile push alert #{alert_id}."
+            "details": "Simulated connection from known Tor exit node (185.220.101.5, Frankfurt)."
         }
         record_log(entry)
-        return jsonify({"scenario": scenario, "result": entry, "alert_id": alert_id})
+        return {"scenario": scenario, "name": "Tor Exit Node Anonymized Infiltration", "result": entry}
 
     elif scenario == "impossible_travel":
         # Feature: User logs in from London, then 5 seconds later from Tokyo
@@ -545,22 +570,23 @@ def api_simulate():
             "device_name": "Workstation", "device_fingerprint": "fp-admin-workstation-lin-01",
             "is_new_device": False, "auth_success": True, "risk_score": risk2,
             "classification": classif2, "triggered_rules": rules2,
-            "details": "Simulated sudden geographic jump to Tokyo."
+            "details": "Simulated sudden geographic jump to Tokyo (London -> Tokyo in seconds)."
         }
         record_log(entry2)
-        return jsonify({"scenario": scenario, "result": entry2})
+        return {"scenario": scenario, "name": "Impossible Velocity Travel (London -> Tokyo)", "result": entry2}
 
     elif scenario == "brute_force":
         # 4 failed attempts in rapid succession
         user = get_user_by_username("admin")
         geo = GEO_LOCATIONS["San Francisco"]
+        last_entry = None
         for p in ["123456", "admin1", "secret", "root"]:
             risk, classif, rules = evaluate_enterprise_threat(
                 user_record=user, username="admin", ip="192.168.1.18", auth_success=False,
                 device_info={"fingerprint": "fp-brute-scanner", "name": "Python Script", "is_known": False, "is_blocked": False},
                 location_info=geo, attempt_time=datetime.now(), recent_logs=get_recent_logs(20)
             )
-            record_log({
+            last_entry = {
                 "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "epoch": time.time(),
                 "username": "admin", "ip": "192.168.1.18", "country": geo["country"],
                 "city": geo["city"], "lat": geo["lat"], "lon": geo["lon"],
@@ -568,10 +594,75 @@ def api_simulate():
                 "is_new_device": True, "auth_success": False, "risk_score": risk,
                 "classification": classif, "triggered_rules": rules,
                 "details": f"Brute force attempt with password '{p}'."
-            })
-        return jsonify({"scenario": scenario, "message": "Brute-force attack generated."})
+            }
+            record_log(last_entry)
+        return {"scenario": scenario, "name": "Brute-Force Credential Spraying", "result": last_entry, "message": "Brute-force attack generated."}
 
+    elif scenario == "new_device_intrusion":
+        # Feature: Attacker tries logging into admin's account from an unknown device
+        # Expected: NEW_DEVICE_DETECTED + Push Alert to Mobile!
+        user = get_user_by_username("admin")
+        t = datetime.now()
+        geo = GEO_LOCATIONS["Moscow"]
+        unknown_fp = f"fp-unrecognized-hacker-{int(time.time())}"
+        unknown_name = "Firefox on Linux (Unknown)"
+        dev_info = {"fingerprint": unknown_fp, "name": unknown_name, "is_known": False, "is_blocked": False}
+        
+        risk, classif, rules = evaluate_enterprise_threat(
+            user_record=user, username="admin", ip="203.0.113.88", auth_success=False,
+            device_info=dev_info, location_info=geo, attempt_time=t, recent_logs=get_recent_logs(20)
+        )
+        register_device(user["id"], unknown_fp, unknown_name, "Desktop", "Firefox", "Linux", is_trusted=0, is_blocked=0)
+        alert_id = create_device_alert(user["id"], "admin", unknown_fp, unknown_name, "203.0.113.88", f"{geo['city']}, {geo['country']}", "HIGH")
+        
+        entry = {
+            "timestamp": t.strftime("%Y-%m-%d %H:%M:%S"), "epoch": time.time(),
+            "username": "admin", "ip": "203.0.113.88", "country": geo["country"],
+            "city": geo["city"], "lat": geo["lat"], "lon": geo["lon"],
+            "device_name": unknown_name, "device_fingerprint": unknown_fp,
+            "is_new_device": True, "auth_success": False, "risk_score": risk,
+            "classification": classif, "triggered_rules": rules,
+            "details": f"Intrusion attempt from new unrecognized device. Dispatched mobile push alert #{alert_id}."
+        }
+        record_log(entry)
+        return {"scenario": scenario, "name": "Unrecognized Device Intrusion (Mobile Push Alert)", "result": entry, "alert_id": alert_id}
+
+    return None
+
+@app.route("/api/simulate", methods=["POST"])
+def api_simulate():
+    data = request.get_json() or {}
+    scenario = data.get("scenario")
+    if scenario == "all":
+        return api_simulate_run_all()
+    res = execute_scenario(scenario)
+    if res:
+        return jsonify(res)
     return jsonify({"error": "Unknown scenario"}), 400
+
+@app.route("/api/simulate/run-all", methods=["POST", "GET"])
+def api_simulate_run_all():
+    """Executes all 6 enterprise security and anomaly scenarios in sequential order."""
+    sequence = [
+        "night_shift_authorized",
+        "brute_force",
+        "tor_exit_node",
+        "impossible_travel",
+        "after_dark_unauthorized",
+        "new_device_intrusion"
+    ]
+    results = []
+    for sc in sequence:
+        res = execute_scenario(sc)
+        if res:
+            results.append(res)
+            time.sleep(0.05)
+    return jsonify({
+        "status": "success",
+        "message": f"Successfully executed all {len(results)} enterprise threat scenarios in sequence.",
+        "results": results,
+        "stats": get_stats()
+    })
 
 @app.route("/api/clear", methods=["POST"])
 def api_clear():

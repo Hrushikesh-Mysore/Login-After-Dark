@@ -291,5 +291,37 @@ class EnterpriseLoginAfterDarkTestCase(unittest.TestCase):
         geo_hint = resolve_ip_location("8.8.8.8", city_hint="Tokyo")
         self.assertEqual(geo_hint["city"], "Tokyo")
 
+    def test_launcher_and_network_info(self):
+        """Verify /launcher view and /api/network-info endpoint."""
+        # Test /launcher HTML
+        resp = self.client.get("/launcher")
+        self.assertEqual(resp.status_code, 200)
+
+        # Test /api/network-info JSON
+        resp = self.client.get("/api/network-info")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertEqual(data["status"], "online")
+        self.assertIn("local_ip", data)
+        self.assertIn("mobile_lan_url", data)
+        self.assertIn("launcher_url", data)
+
+    def test_simulate_run_all_and_tor(self):
+        """Verify /api/simulate/run-all and tor_exit_node simulation."""
+        # Tor Exit Node scenario
+        resp = self.client.post("/api/simulate", json={"scenario": "tor_exit_node"})
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertEqual(data["scenario"], "tor_exit_node")
+        self.assertEqual(data["result"]["ip"], "185.220.101.5")
+
+        # Run All scenarios
+        resp = self.client.post("/api/simulate/run-all")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertEqual(data["status"], "success")
+        self.assertEqual(len(data["results"]), 6)
+
 if __name__ == "__main__":
     unittest.main()
+

@@ -6,6 +6,37 @@ The platform detects suspicious authentication behavior, protects against multi-
 
 ---
 
+## 🚀 1-Click Quick Launch & Mobile Installation
+
+### 1. One-Click Automated Launcher (`launch.sh`)
+Start the backend, resolve local network IP, and open the Mission Control Hub in your browser with a single command:
+```bash
+./launch.sh
+```
+* **Desktop Shortcut**: Double-click `LoginAfterDark.desktop` from your file explorer or desktop.
+* **Offline Quick Launcher**: Double-click [LAUNCHER.html](file:///home/hrushikesh/Projects/Personal/Login-After-Dark/LAUNCHER.html) directly in any browser.
+
+### 2. Direct Application Portals
+* 🖥️ **SOC Enterprise Command Center**: [http://localhost:5000/](http://localhost:5000/)
+* 📱 **Mobile Guardian Companion (Web)**: [http://localhost:5000/mobile](http://localhost:5000/mobile)
+* ⚡ **Interactive Mission Control Hub**: [http://localhost:5000/launcher](http://localhost:5000/launcher)
+
+### 3. ⚡ Execute All Security Scenarios at Once
+Click **"⚡ Execute All Tasks At Once"** on the [Mission Control](http://localhost:5000/launcher) screen, or trigger the batch endpoint:
+```bash
+curl -X POST http://localhost:5000/api/simulate/run-all
+```
+This sequentially fires all 6 threat and anomaly scenarios (Night Shift Baseline, Brute-Force Spray, Tor Exit Node, Impossible Travel Velocity, Shift Violation, and Unknown Device Intrusion with instant Mobile Push Alert).
+
+### 4. 📲 Mobile Phone Installation (PWA — Zero Android Studio Needed)
+1. Ensure your smartphone is connected to the same Wi-Fi network as this computer.
+2. Scan the dynamic QR code displayed on [http://localhost:5000/launcher](http://localhost:5000/launcher) (or navigate to `http://<YOUR_LAN_IP>:5000/mobile`).
+3. **Android (Chrome)**: Tap `⋮` (menu) &rarr; **"Add to Home screen"** or **"Install app"**.
+4. **iOS (Safari)**: Tap `⎋` (Share) &rarr; **"Add to Home Screen"**.
+5. The standalone **Guardian Lite** security app will be installed directly on your home screen with full notification and vibration capabilities!
+
+---
+
 ## 🌟 Architecture & Core Innovations
 
 ```text

@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login After Dark — Mission Control & Quick Launcher</title>
+  
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/icon-192.png') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #070b14;
+      --card-bg: rgba(15, 23, 42, 0.85);
+      --card-border: rgba(30, 41, 59, 0.8);
+      --cyan: #06b6d4;
+      --cyan-glow: rgba(6, 182, 212, 0.25);
+      --purple: #8b5cf6;
+      --purple-glow: rgba(139, 92, 246, 0.25);
+      --emerald: #10b981;
+      --red: #ef4444;
+      --amber: #f59e0b;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(6, 182, 212, 0.12) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.12) 0px, transparent 50%),
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 32px 32px, 32px 32px;
+      color: var(--text);
+      font-family: 'Inter', -apple-system, sans-serif;
+      min-height: 100vh;
+      padding: 2.5rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1100px;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.5rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .logo-badge {
+      width: 54px;
+      height: 54px;
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(139, 92, 246, 0.2));
+      border: 1px solid var(--cyan);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.75rem;
+      box-shadow: 0 0 20px var(--cyan-glow);
+    }
+
+    .brand-title {
+      font-size: 1.75rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #ffffff 40%, var(--cyan) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-subtitle {
+      color: var(--muted);
+      font-size: 0.875rem;
+      font-family: 'Fira Code', monospace;
+      margin-top: 2px;
+    }
+
+    .server-status-pill {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      font-size: 0.8125rem;
+      font-family: 'Fira Code', monospace;
+      color: var(--emerald);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background-color: var(--emerald);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--emerald);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.9); }
+    }
+
+    /* Grid layout */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.5rem;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 18px;
+      padding: 1.75rem;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      transition: all 0.25s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card:hover {
+      border-color: rgba(6, 182, 212, 0.4);
+      box-shadow: 0 12px 36px rgba(6, 182, 212, 0.1);
+      transform: translateY(-2px);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .card-icon-title {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .card-icon {
+      font-size: 1.5rem;
+    }
+
+    .card-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+
+    .badge {
+      font-size: 0.6875rem;
+      font-family: 'Fira Code', monospace;
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-cyan {
+      background: rgba(6, 182, 212, 0.15);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      color: var(--cyan);
+    }
+
+    .badge-purple {
+      background: rgba(139, 92, 246, 0.15);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      color: var(--purple);
+    }
+
+    .badge-emerald {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: var(--emerald);
+    }
+
+    .card-desc {
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    .feature-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      color: #cbd5e1;
+    }
+
+    .feature-list li {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .feature-list li::before {
+      content: "✔";
+      color: var(--cyan);
+      font-weight: bold;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.625rem;
+      padding: 0.875rem 1.5rem;
+      border-radius: 12px;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      border: none;
+      font-family: inherit;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #06b6d4, #0284c7);
+      color: #ffffff;
+      box-shadow: 0 4px 15px var(--cyan-glow);
+    }
+
+    .btn-primary:hover {
+      box-shadow: 0 6px 20px rgba(6, 182, 212, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .btn-purple {
+      background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+      color: #ffffff;
+      box-shadow: 0 4px 15px var(--purple-glow);
+    }
+
+    .btn-purple:hover {
+      box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+    }
+
+    .btn-danger:hover {
+      background: rgba(239, 68, 68, 0.25);
+    }
+
+    .btn-secondary {
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      color: var(--text);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(51, 65, 85, 0.8);
+      border-color: rgba(148, 163, 184, 0.4);
+    }
+
+    /* Automated Test Runner Section */
+    .runner-box {
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.7));
+      border: 1px solid rgba(6, 182, 212, 0.35);
+      border-radius: 20px;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), inset 0 0 30px rgba(6, 182, 212, 0.05);
+    }
+
+    .runner-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .runner-title-group h2 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+    }
+
+    .runner-actions {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    /* Progress bar */
+    .progress-container {
+      width: 100%;
+      height: 8px;
+      background: rgba(30, 41, 59, 0.8);
+      border-radius: 9999px;
+      overflow: hidden;
+      display: none;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--cyan), var(--purple));
+      transition: width 0.3s ease;
+      box-shadow: 0 0 12px var(--cyan);
+    }
+
+    /* Scenario items */
+    .scenario-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+
+    .scenario-item {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      border-radius: 12px;
+      padding: 1rem 1.125rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+    }
+
+    .scenario-item.running {
+      border-color: var(--cyan);
+      box-shadow: 0 0 15px var(--cyan-glow);
+    }
+
+    .scenario-item.success {
+      border-color: rgba(16, 185, 129, 0.4);
+      background: rgba(16, 185, 129, 0.05);
+    }
+
+    .scenario-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .scenario-name {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #e2e8f0;
+    }
+
+    .scenario-badge {
+      font-size: 0.7rem;
+      font-family: 'Fira Code', monospace;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      background: rgba(148, 163, 184, 0.1);
+      color: var(--muted);
+    }
+
+    .scenario-desc {
+      font-size: 0.775rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    /* Mobile install box */
+    .mobile-box {
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(88, 28, 135, 0.15));
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-radius: 20px;
+      padding: 2rem;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 2rem;
+      align-items: center;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    @media (max-width: 768px) {
+      .mobile-box {
+        grid-template-columns: 1fr;
+        justify-items: center;
+        text-align: center;
+      }
+    }
+
+    .qr-card {
+      background: #ffffff;
+      padding: 1rem;
+      border-radius: 16px;
+      box-shadow: 0 0 25px rgba(139, 92, 246, 0.3);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    #qrcode img, #qrcode canvas {
+      display: block;
+      width: 160px;
+      height: 160px;
+    }
+
+    .qr-caption {
+      color: #0f172a;
+      font-size: 0.75rem;
+      font-weight: 700;
+      font-family: 'Fira Code', monospace;
+      letter-spacing: 0.5px;
+    }
+
+    .mobile-instructions {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .install-tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .tab-btn {
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      color: var(--muted);
+      padding: 0.4rem 0.9rem;
+      border-radius: 8px;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .tab-btn.active {
+      background: rgba(139, 92, 246, 0.25);
+      border-color: var(--purple);
+      color: #ffffff;
+    }
+
+    .tab-content {
+      font-size: 0.875rem;
+      color: #cbd5e1;
+      line-height: 1.6;
+      background: rgba(15, 23, 42, 0.6);
+      padding: 1rem;
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.1);
+    }
+
+    .tab-content ol {
+      padding-left: 1.25rem;
+    }
+
+    .url-copy-box {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      padding: 0.625rem 1rem;
+      border-radius: 10px;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.85rem;
+      color: var(--cyan);
+      word-break: break-all;
+    }
+
+    .copy-btn {
+      background: transparent;
+      border: none;
+      color: var(--text);
+      cursor: pointer;
+      padding: 0.25rem;
+      border-radius: 4px;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      transition: color 0.2s;
+    }
+
+    .copy-btn:hover {
+      color: var(--cyan);
+    }
+
+    /* Terminal Box */
+    .terminal-output {
+      background: #020617;
+      border: 1px solid rgba(30, 41, 59, 0.8);
+      border-radius: 12px;
+      padding: 1rem;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.8125rem;
+      color: #38bdf8;
+      max-height: 180px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      display: none;
+    }
+
+    /* Footer */
+    .footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 0.8125rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid rgba(148, 163, 184, 0.1);
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+
+    <!-- Top Navigation Header -->
+    <header class="header">
+      <div class="brand-group">
+        <div class="logo-badge">🌙</div>
+        <div>
+          <h1 class="brand-title">LOGIN AFTER DARK</h1>
+          <p class="brand-subtitle">Enterprise SOC Threat Command Center & Mobile Defense</p>
+        </div>
+      </div>
+      <div class="server-status-pill">
+        <span class="status-dot"></span>
+        <span>SERVER ONLINE &bull; PORT {{ port }} &bull; WAL ACTIVE</span>
+      </div>
+    </header>
+
+    <!-- Main Dual Application Launcher Cards -->
+    <div class="grid-2">
+      
+      <!-- Card 1: SOC Command Center -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon-title">
+            <span class="card-icon">🖥️</span>
+            <h2 class="card-title">Desktop SOC Command Center</h2>
+          </div>
+          <span class="badge badge-cyan">SOC Portal</span>
+        </div>
+        <p class="card-desc">
+          Full enterprise security operations command center featuring real-time Server-Sent Events (SSE) telemetry, interactive Leaflet GeoIP threat map, behavioral anomaly scoring, and active session manager.
+        </p>
+        <ul class="feature-list">
+          <li>Live real-time login audit stream (&lt;100ms latency)</li>
+          <li>Continuous circular shift gradient calculation</li>
+          <li>Browser canvas & hardware entropy SHA-256 fingerprinting</li>
+          <li>Interactive simulation sandbox with collapsible controls</li>
+        </ul>
+        <a href="/" target="_blank" class="btn btn-primary" style="margin-top: auto;">
+          🚀 Open Desktop SOC Dashboard
+        </a>
+      </div>
+
+      <!-- Card 2: Mobile Companion PWA -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon-title">
+            <span class="card-icon">📱</span>
+            <h2 class="card-title">Security Guardian Mobile PWA</h2>
+          </div>
+          <span class="badge badge-purple">Instagram Lite UI</span>
+        </div>
+        <p class="card-desc">
+          Dedicated mobile companion for enterprise employees & SOC operators. Features Instagram Lite-style stories rings, live security post feed, push intrusion notifications, and 1-tap device authorization.
+        </p>
+        <ul class="feature-list">
+          <li>Instant intrusion push alerts with audio & haptic vibration</li>
+          <li>1-Tap Remote Device Blocking & Authorization</li>
+          <li>1-Tap Shift Schedule Switcher (Day / Night Shift)</li>
+          <li>Installs directly to home screen (No app store needed)</li>
+        </ul>
+        <div style="display: flex; gap: 0.75rem; margin-top: auto;">
+          <a href="/mobile" target="_blank" class="btn btn-purple" style="flex: 1;">
+            📱 Open Mobile Web View
+          </a>
+          <a href="#mobile-install-section" class="btn btn-secondary">
+            Install on Phone ↓
+          </a>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ⚡ AUTOMATED TEST RUNNER (Execute Tasks At Once) -->
+    <div class="runner-box">
+      <div class="runner-header">
+        <div class="runner-title-group">
+          <h2>⚡ Automated Threat & Defense Suite</h2>
+          <p class="card-desc">Execute all 6 threat detection and mobile alerting scenarios sequentially with 1 click.</p>
+        </div>
+        <div class="runner-actions">
+          <button id="btn-run-all" class="btn btn-primary" onclick="runAllTasksAtOnce()">
+            ⚡ Execute All Tasks At Once
+          </button>
+          <button class="btn btn-danger" onclick="clearAuditLogs()">
+            🗑️ Clear Audit Logs
+          </button>
+        </div>
+      </div>
+
+      <!-- Live progress bar -->
+      <div id="progress-wrapper" class="progress-container">
+        <div id="progress-bar" class="progress-bar"></div>
+      </div>
+
+      <!-- Scenario Checklist Grid -->
+      <div class="scenario-grid">
+        <div class="scenario-item" id="sc-night_shift_authorized">
+          <div class="scenario-top">
+            <span class="scenario-name">1. Night Shift Authorized</span>
+            <span class="scenario-badge" id="badge-night_shift_authorized">Ready</span>
+          </div>
+          <p class="scenario-desc">User `night_analyst` at 03:15 AM (NYC). Baseline verification; approved schedule (SAFE 0/100).</p>
+        </div>
+
+        <div class="scenario-item" id="sc-brute_force">
+          <div class="scenario-top">
+            <span class="scenario-name">2. Brute-Force Spray</span>
+            <span class="scenario-badge" id="badge-brute_force">Ready</span>
+          </div>
+          <p class="scenario-desc">4 rapid consecutive password failures targeting admin from San Francisco (HIGH 85/100).</p>
+        </div>
+
+        <div class="scenario-item" id="sc-tor_exit_node">
+          <div class="scenario-top">
+            <span class="scenario-name">3. Tor Exit Relay Login</span>
+            <span class="scenario-badge" id="badge-tor_exit_node">Ready</span>
+          </div>
+          <p class="scenario-desc">Anonymized breach attempt from known Tor exit node (185.220.101.5 Frankfurt - CRITICAL 95/100).</p>
+        </div>
+
+        <div class="scenario-item" id="sc-impossible_travel">
+          <div class="scenario-top">
+            <span class="scenario-name">4. Impossible Travel Jump</span>
+            <span class="scenario-badge" id="badge-impossible_travel">Ready</span>
+          </div>
+          <p class="scenario-desc">Admin logged in London, then 5s later Tokyo. Flagged by haversine velocity engine (CRITICAL 95/100).</p>
+        </div>
+
+        <div class="scenario-item" id="sc-after_dark_unauthorized">
+          <div class="scenario-top">
+            <span class="scenario-name">5. Shift Violation</span>
+            <span class="scenario-badge" id="badge-after_dark_unauthorized">Ready</span>
+          </div>
+          <p class="scenario-desc">Day-worker admin accessing corporate terminal at 03:15 AM (Frankfurt - HIGH 70/100).</p>
+        </div>
+
+        <div class="scenario-item" id="sc-new_device_intrusion">
+          <div class="scenario-top">
+            <span class="scenario-name">6. Unknown Device + Mobile Alert</span>
+            <span class="scenario-badge" id="badge-new_device_intrusion">Ready</span>
+          </div>
+          <p class="scenario-desc">Attacker from Moscow on unknown Firefox. Dispatches instant push notification & haptic alert to phone!</p>
+        </div>
+      </div>
+
+      <!-- Terminal output view -->
+      <div id="terminal-log" class="terminal-output"></div>
+    </div>
+
+    <!-- 📱 MOBILE INSTALLATION STATION (Scan & Install PWA) -->
+    <div class="mobile-box" id="mobile-install-section">
+      <div class="qr-card">
+        <div id="qrcode"></div>
+        <span class="qr-caption">SCAN TO LAUNCH PWA</span>
+      </div>
+
+      <div class="mobile-instructions">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+          <h2 style="font-size: 1.35rem; font-weight: 700;">📲 Install Security Guardian on Your Phone</h2>
+          <span class="badge badge-emerald">ZERO ANDROID STUDIO NEEDED</span>
+        </div>
+        
+        <p class="card-desc">
+          Scan the QR code with your smartphone camera while connected to the same Wi-Fi network (<code style="color:var(--cyan);">{{ local_ip }}</code>), or tap the copy button to send the direct link to your mobile browser:
+        </p>
+
+        <!-- Dynamic URL Box with Copy Button -->
+        <div class="url-copy-box">
+          <span style="user-select: all;" id="mobile-url-text">http://{{ local_ip }}:{{ port }}/mobile</span>
+          <button class="copy-btn" onclick="copyMobileUrl()" title="Copy Link">📋</button>
+        </div>
+
+        <!-- Installation Tabs (Android / iOS) -->
+        <div class="install-tabs">
+          <button class="tab-btn active" id="tab-btn-android" onclick="selectInstallTab('android')">🤖 Android (Chrome)</button>
+          <button class="tab-btn" id="tab-btn-ios" onclick="selectInstallTab('ios')">🍎 iPhone / iPad (Safari)</button>
+        </div>
+
+        <div class="tab-content" id="tab-content-android">
+          <ol>
+            <li>Open the link above in <strong>Google Chrome</strong> on your Android phone.</li>
+            <li>Tap the three-dot menu icon <strong>⋮</strong> in the top-right corner.</li>
+            <li>Select <strong>"Add to Home screen"</strong> (or tap the <em>"Install app"</em> banner).</li>
+            <li>The <strong>Guardian Lite</strong> icon will be added to your home screen with native standalone launch!</li>
+          </ol>
+        </div>
+
+        <div class="tab-content" id="tab-content-ios" style="display: none;">
+          <ol>
+            <li>Scan the QR code or open the link above in <strong>Safari</strong> on your iPhone.</li>
+            <li>Tap the <strong>Share</strong> button (the box with an upward arrow ⎋) in the bottom toolbar.</li>
+            <li>Scroll down and select <strong>"Add to Home Screen"</strong>.</li>
+            <li>Tap <strong>"Add"</strong> in the top-right corner. The app will launch in fullscreen without browser bars!</li>
+          </ol>
+        </div>
+
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 0.5rem;">
+          <span class="badge badge-cyan">✔ Offline Service Worker</span>
+          <span class="badge badge-purple">✔ Web Push Notification API</span>
+          <span class="badge badge-emerald">✔ Haptic Vibration</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div>Login After Dark &bull; Enterprise Threat Detection & Mobile Authorization Architecture</div>
+      <div style="font-family: 'Fira Code', monospace;">LAN: {{ local_ip }}:{{ port }}</div>
+    </footer>
+
+  </div>
+
+  <!-- QR Code Generator Library -->
+  <script src="{{ url_for('static', filename='js/qrcode.min.js') }}"></script>
+
+  <script>
+    // Initialize QR Code
+    document.addEventListener('DOMContentLoaded', () => {
+      const mobileUrl = "http://{{ local_ip }}:{{ port }}/mobile";
+      const qrContainer = document.getElementById('qrcode');
+      if (qrContainer && typeof QRCode !== 'undefined') {
+        new QRCode(qrContainer, {
+          text: mobileUrl,
+          width: 160,
+          height: 160,
+          colorDark: "#070b14",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.M
+        });
+      }
+    });
+
+    // Copy URL Helper
+    function copyMobileUrl() {
+      const text = document.getElementById('mobile-url-text').innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        alert("Mobile Companion link copied to clipboard!\n" + text);
+      }).catch(() => {
+        prompt("Copy this URL to open on your phone:", text);
+      });
+    }
+
+    // Switch install guide tabs
+    function selectInstallTab(os) {
+      const androidTab = document.getElementById('tab-content-android');
+      const iosTab = document.getElementById('tab-content-ios');
+      const btnAndroid = document.getElementById('tab-btn-android');
+      const btnIos = document.getElementById('tab-btn-ios');
+
+      if (os === 'android') {
+        androidTab.style.display = 'block';
+        iosTab.style.display = 'none';
+        btnAndroid.classList.add('active');
+        btnIos.classList.remove('active');
+      } else {
+        androidTab.style.display = 'none';
+        iosTab.style.display = 'block';
+        btnAndroid.classList.remove('active');
+        btnIos.classList.add('active');
+      }
+    }
+
+    // Execute All Tasks At Once
+    async function runAllTasksAtOnce() {
+      const btn = document.getElementById('btn-run-all');
+      const progressWrapper = document.getElementById('progress-wrapper');
+      const progressBar = document.getElementById('progress-bar');
+      const terminal = document.getElementById('terminal-log');
+
+      btn.disabled = true;
+      btn.innerText = "⚡ Executing Scenarios...";
+      progressWrapper.style.display = 'block';
+      progressBar.style.width = '10%';
+      terminal.style.display = 'block';
+      terminal.innerText = `[${new Date().toLocaleTimeString()}] Initializing Enterprise Security Suite...\n`;
+
+      const scenarios = [
+        { id: "night_shift_authorized", label: "Night Shift Authorized (Approved Schedule)" },
+        { id: "brute_force", label: "Brute-Force Credential Spraying" },
+        { id: "tor_exit_node", label: "Tor Exit Relay Login Attempt" },
+        { id: "impossible_travel", label: "Impossible Travel Jump (London -> Tokyo)" },
+        { id: "after_dark_unauthorized", label: "After Dark Unauthorized Access (Shift Violation)" },
+        { id: "new_device_intrusion", label: "Unknown Device Intrusion + Mobile Push Alert" }
+      ];
+
+      for (let i = 0; i < scenarios.length; i++) {
+        const sc = scenarios[i];
+        const itemEl = document.getElementById(`sc-${sc.id}`);
+        const badgeEl = document.getElementById(`badge-${sc.id}`);
+
+        if (itemEl) itemEl.classList.add('running');
+        if (badgeEl) {
+          badgeEl.innerText = "Running...";
+          badgeEl.style.color = "#06b6d4";
+        }
+
+        terminal.innerText += `[${new Date().toLocaleTimeString()}] Firing scenario [${i+1}/6]: ${sc.label}...\n`;
+        terminal.scrollTop = terminal.scrollHeight;
+
+        try {
+          const resp = await fetch('/api/simulate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ scenario: sc.id })
+          });
+          const data = await resp.json();
+
+          if (itemEl) {
+            itemEl.classList.remove('running');
+            itemEl.classList.add('success');
+          }
+          if (badgeEl) {
+            badgeEl.innerText = "✔ Executed";
+            badgeEl.style.color = "#10b981";
+          }
+
+          terminal.innerText += `  ↳ Result: ${data.name || sc.label} | Classification: ${data.result?.classification || 'OK'}\n`;
+          if (data.alert_id) {
+            terminal.innerText += `  ↳ 🚨 Dispatched Mobile Push Alert #${data.alert_id} (Check phone/companion tab!)\n`;
+          }
+        } catch (err) {
+          if (badgeEl) {
+            badgeEl.innerText = "Failed";
+            badgeEl.style.color = "#ef4444";
+          }
+          terminal.innerText += `  ↳ Error executing ${sc.id}: ${err.message}\n`;
+        }
+
+        const pct = Math.round(((i + 1) / scenarios.length) * 100);
+        progressBar.style.width = `${pct}%`;
+        await new Promise(r => setTimeout(r, 400));
+      }
+
+      terminal.innerText += `[${new Date().toLocaleTimeString()}] ✅ ALL SCENARIOS COMPLETE! Check the SOC Dashboard or Mobile PWA.\n`;
+      terminal.scrollTop = terminal.scrollHeight;
+
+      btn.disabled = false;
+      btn.innerText = "✔ All Scenarios Completed (Run Again)";
+    }
+
+    // Clear Audit Logs
+    async function clearAuditLogs() {
+      if (!confirm("Are you sure you want to clear all audit logs and alert queues?")) return;
+      try {
+        const resp = await fetch('/api/clear', { method: 'POST' });
+        const data = await resp.json();
+        alert(data.message || "Audit logs cleared.");
+        location.reload();
+      } catch (err) {
+        alert("Failed to clear logs: " + err.message);
+      }
+    }
+  </script>
+</body>
+</html>
