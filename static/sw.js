@@ -7,7 +7,10 @@ const STATIC_ASSETS = [
   '/static/js/mobile.js',
   '/static/js/fingerprint.js',
   '/static/img/icon-192.png',
-  '/static/img/icon-512.png'
+  '/static/img/icon-512.png',
+  '/static/img/logo.svg',
+  '/static/img/favicon.svg',
+  '/static/img/favicon.png'
 ];
 
 self.addEventListener('install', (event) => {

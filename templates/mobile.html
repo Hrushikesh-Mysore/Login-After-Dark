@@ -12,6 +12,9 @@
   <meta name="apple-mobile-web-app-title" content="Guardian Lite">
   <meta name="theme-color" content="#070b14">
   <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/logo.svg') }}">
+  <link rel="alternate icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/icon-192.png') }}">
 
   <!-- Stylesheets & Fonts -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}">
@@ -27,7 +30,7 @@
     <!-- ========================================== -->
     <header class="insta-header">
       <div class="insta-brand">
-        <span class="insta-shield">🛡️</span>
+        <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="Security Guardian" class="insta-logo-img" style="width:28px; height:28px; border-radius:7px; filter:drop-shadow(0 0 6px rgba(6,182,212,0.6));">
         <span class="insta-logo-text">SECURITY GUARDIAN</span>
         <span class="insta-badge-lite">LITE</span>
       </div>
@@ -49,7 +52,9 @@
       <!-- Story 1: Defense Active -->
       <div class="story-item active-ring" onclick="switchMobileTab('tab-alerts')">
         <div class="story-avatar-wrapper">
-          <div class="story-avatar">🛡️</div>
+          <div class="story-avatar" style="display:flex; align-items:center; justify-content:center;">
+            <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="Protection" style="width:26px; height:26px; border-radius:6px;">
+          </div>
         </div>
         <span class="story-label">Protection</span>
       </div>

@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login After Dark - Enterprise SOC Threat Intelligence & Mobile Defense</title>
   
+  <!-- Favicon & Vector Icons -->
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/logo.svg') }}">
+  <link rel="alternate icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/icon-192.png') }}">
+
   <!-- Leaflet CSS for Global Threat Map -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
   
@@ -31,6 +36,7 @@
       <!-- Command Center Header -->
       <header class="dashboard-header">
         <div class="brand">
+          <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="Login After Dark" class="brand-logo-emblem" style="width:42px; height:42px; border-radius:10px; box-shadow:0 0 15px rgba(6,182,212,0.35); flex-shrink:0;">
           <div class="pulse-indicator"></div>
           <div>
             <h1 class="brand-title">LOGIN AFTER DARK <span class="badge-version">SOC v2.5</span></h1>
@@ -174,7 +180,7 @@
       <!-- Standard Login Card -->
       <div class="login-card" id="login-card">
         <div class="login-header">
-          <div class="shield-badge">🛡️</div>
+          <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="Login After Dark" class="portal-logo" style="width:54px; height:54px; border-radius:12px; box-shadow:0 0 18px rgba(6,182,212,0.4); margin-bottom:8px;">
           <h2>Authentication Portal</h2>
           <p>Multi-Device & Behavioral Anomaly Inspection</p>
         </div>
