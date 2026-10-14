@@ -84,4 +84,14 @@ This document tracks the initial state of the **Login After Dark** application, 
 - [x] Verified zero 500 errors, zero lock contention, PRAGMA ok database integrity, and ~70 ops/sec throughput.
 - [x] End-to-end verification of `demo-attacks/` suite against live backend server.
 - [x] System documentation & operational README update.
-- [x] Full automated test suite passes (14/14 tests passing).
+- [x] Full automated test suite passes (15/15 tests passing).
+
+### Phase 7: Mission Control Launcher, Mobile PWA Install Station & 1-Click Execution Suite
+- [x] **One-Click Automated Launcher Script (`launch.sh`)**: Starts backend with dependency checks, determines local LAN IP, auto-opens browser to Mission Control, and sets graceful Ctrl+C server trap.
+- [x] **Root Launch File (`LAUNCHER.html`)**: Double-clickable HTML file with direct localhost links, dynamic server health detection, mobile installation guide, and browser-driven scenario triggers.
+- [x] **Desktop Shortcut (`LoginAfterDark.desktop`)**: Standard Linux desktop entry for 1-click startup from desktop / file manager.
+- [x] **Mission Control Web Portal (`/launcher` & `templates/launcher.html`)**: Cyberpunk SOC control hub connecting the desktop dashboard, mobile PWA, network discovery, and batch threat triggers.
+- [x] **1-Click Batch Execution Suite (`/api/simulate/run-all`)**: Fires all 6 enterprise security scenarios sequentially (Night Shift, Brute Force, Tor Exit Node, Impossible Travel, Shift Violation, New Device Intrusion with Mobile Push Alert) with live progression tracking.
+- [x] **Zero-Android-Studio Mobile Installation Station**: Client-side QR code generator (`qrcode.min.js`) pointing to local Wi-Fi LAN IP, with step-by-step guides for Android Chrome & iOS Safari.
+- [x] **PWA Service Worker & App Manifest (`sw.js` & `static/img/`)**: Standalone display mode, offline cache, 192x192 & 512x512 app icons, and vibration alert integration.
+
